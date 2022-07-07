@@ -1,0 +1,107 @@
+palette: xxx
+color_space: lab + contrast
+shades:
+  p10: 0.1
+  p25: 0.25
+  p50: 0.5
+  p75: 0.75
+  p100: 1
+  p125: 1.25
+colors:
+  background: BUILT_IN
+  foreground: BUILT_IN
+  c1: BUILT_IN
+  c2: BUILT_IN
+  c3: BUILT_IN
+  c4: BUILT_IN
+  c5: BUILT_IN
+  c6: BUILT_IN
+  c7: BUILT_IN
+  red: BUILT_IN
+  green: BUILT_IN
+  yellow: BUILT_IN
+  blue: BUILT_IN
+  magenta: BUILT_IN
+  cyan: BUILT_IN
+  base9:
+    c0: background
+    c1: foreground.p100
+    c2: c1.p100
+    c3: c2.p100
+    c4: c3.p100
+    c5: c4.p100
+    c6: c5.p100
+    c7: c6.p100
+    c8: c7.p100
+  ansi:
+    black: background
+    red: red.p100
+    green: green.p100
+    yellow: yellow.p100
+    blue: blue.p100
+    magenta: magenta.p100
+    cyan: cyan.p100
+    white: foreground.p75
+    bright_black: foreground.p25
+    bright_red: red.p125
+    bright_green: green.p125
+    bright_yellow: yellow.p125
+    bright_blue: blue.p125
+    bright_magenta: magenta.p125
+    bright_cyan: cyan.p125
+    bright_white: foreground.p100
+    c0: background
+    c1: red.p100
+    c2: green.p100
+    c3: yellow.p100
+    c4: blue.p100
+    c5: magenta.p100
+    c6: cyan.p100
+    c7: foreground.p75
+    c8: foreground.p25
+    c9: red.p125
+    ca: green.p125
+    cb: yellow.p125
+    cc: blue.p125
+    cd: magenta.p125
+    ce: cyan.p125
+    cf: foreground.p100
+  c0: foreground
+
+  # syntax highlighting
+  operator: c6
+  parameter: c5
+  string: c3
+  function: c4
+  keyword: c7
+  static: c1
+  decorator: c3
+  type: c1
+  literal: c4
+  variable: foreground
+  field: c2 # aka instance variable
+  constant: foreground
+  escape: c6
+  property_value: c4
+
+  # UI
+  primary: c1 # main color in ui
+  secondary: c2 # need special attention, should be only for small portion of the ui.
+  selection: c2
+  comment: foreground
+  cursor: foreground
+  link: c1 # url or links in ui
+  highlight: c1 # Same as Secondary, for ui hovering and other types of highlight
+  match: c4 # search result
+  divider: foreground
+  scroll: foreground
+  line_number: foreground
+  quote: c3 # Same as string. for displaying quotes in a document or ui context
+  fold: foreground # Something that can fold/expand, or a folder.
+  debug: c5 # anything related to debugging
+
+  # absolute
+  # error: red
+  # good: green
+  # warning: yellow
+  # info: blue
