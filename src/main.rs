@@ -45,6 +45,7 @@ fn main() -> Result<()> {
             arg!(
                 -t --template <FILE> "Sets template file"
             )
+            .required(false)
         )
         .arg(
             arg!(
@@ -341,10 +342,10 @@ fn mix(c1: &Rgb, c2: &Rgb, w: f32) -> Rgb {
     let c2_xyz: Xyz = c2.into_format().into_color_unclamped();
     let c1_lab: Lab = c1_xyz.into_color_unclamped();
     let c2_lab: Lab = c2_xyz.into_color();
-    let c1_contrast = (c1_xyz.y + 5.).ln();
-    let c2_contrast = (c2_xyz.y + 5.).ln();
+    let c1_contrast = (c1_xyz.y + 0.05).ln();
+    let c2_contrast = (c2_xyz.y + 0.05).ln();
     let c3_contrast = mix1d(c1_contrast, c2_contrast, w);
-    let c3y = c3_contrast.exp() - 5.;
+    let c3y = c3_contrast.exp() - 0.05;
     let c3l_lab: Lab = Xyz::new(0., c3y, 0.).into_color_unclamped();
     let c3 = Lab::new(c3l_lab.l, mix1d(c1_lab.a, c2_lab.a, w), mix1d(c1_lab.b, c2_lab.b, w));
 
