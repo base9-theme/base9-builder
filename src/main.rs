@@ -1,7 +1,7 @@
 
 use palette::convert::IntoColorUnclamped;
 use palette::rgb::channels::Argb;
-use clap::{arg, command, ArgAction};
+use clap::{arg, command, ArgAction, Command, ArgMatches};
 use itertools::Itertools;
 use palette::{
     Srgb,
@@ -11,6 +11,7 @@ use palette::{
 use std::cell::RefCell;
 use std::io::{self, Read};
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::{
     collections::HashMap,
@@ -38,31 +39,32 @@ fn read_stdin() -> Result<String> {
     Ok(buf)
 }
 
-fn main() -> Result<()> {
-    let matches = command!()
-        .arg(arg!([palette] "9 6-digit hex color value separated by `-`").required(false))
-        .arg(
-            arg!(
-                -t --template <FILE> "Sets template file"
-            )
-            .required(false)
+fn cli() -> Command<'static> {
+    Command::new("git")
+        .about("base9 builder CLI")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("render")
+                .about("renders theme template")
+                //TODO(CONTRIB): make sure to use the term "palette code" everywhere.
+                .arg(arg!(<PALETTE> "The palette code"))
+                .arg(arg!(<TEMPLATE> "path to template file"))
         )
-        .arg(
-            arg!(
-                -p --preview <TYPE> "Preview the palette"
-            )
-            .required(false)
+        .subcommand(
+            Command::new("preview")
+                .about("prints a table of all generated colors to preview")
+                .arg(arg!(<PALETTE> "The palette code"))
         )
-        .arg(
-            arg!(
-                -c --config "Specify config file, not implemented yet"
-            )
-            .required(false)
-        )
-        .get_matches();
+        // .subcommand(
+        //     Command::new("list-variables")
+        //         .about("prints all variables used by templates")
+        //         .arg(arg!(<PALETTE> "The palette code"))
+        // )
+}
 
-    // You can check the value provided by positional arguments, or option arguments
-    let palette_arg = matches.get_one::<String>("palette").ok_or(anyhow!("missing palette!"))?;
+fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Value> {
+    let palette_arg = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
 
     let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
     if !re.is_match(palette_arg) {
@@ -76,33 +78,36 @@ fn main() -> Result<()> {
         config_map.insert("palette".to_string().into(), palette_arg.to_string().into());
     }
 
-
     let variables = get_variables(&config)?;
-    let formatted_variables = format_variables(&config, &variables);
-    
+    Ok(format_variables(&config, &variables))
+}
 
-    if let Some(preview_arg) = matches.get_one::<String>("preview") {
-        if preview_arg == "color" {
-            compile_str(include_str!("preview.mustache"))?.render(&mut io::stdout(), &formatted_variables)?;
-            return Ok(());
-        } else if preview_arg == "data" {
-            println!("{}", serde_yaml::to_string(&formatted_variables)?);
+fn main() -> Result<()> {
+    let matches = cli().get_matches();
+    match matches.subcommand() {
+        Some(("render", sub_matches)) => {
+            let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
+            let template_arg = sub_matches.get_one::<String>("TEMPLATE").unwrap();
+
+            let template = if template_arg == "-" {
+                let template_str = read_stdin()?;
+                compile_str(&template_str)
+            } else {
+                compile_path(template_arg)
+            }?;
+            template.render(&mut io::stdout(), &formatted_variables)?;
             return Ok(());
         }
+        Some(("preview", sub_matches)) => {
+            let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
+            compile_str(include_str!("preview.mustache"))?.render(&mut io::stdout(), &formatted_variables)?;
+        }
+        Some(("list-variables", sub_matches)) => {
+            let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
+            println!("{}", serde_yaml::to_string(&formatted_variables)?);
+        }
+        _ => unreachable!()
     }
-
-    if let Some(template_arg) = matches.get_one::<String>("template") {
-        let template = if template_arg == "-" {
-            let template_str = read_stdin()?;
-            compile_str(&template_str)
-        } else {
-            compile_path(template_arg)
-        }?;
-        template.render(&mut io::stdout(), &formatted_variables)?;
-        return Ok(());
-    }
-
-    println!("Nothing to do! specify -p or -t");
 
     return Ok(());
 }
