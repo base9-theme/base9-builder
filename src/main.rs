@@ -48,13 +48,13 @@ fn cli() -> Command<'static> {
             Command::new("render")
                 .about("renders theme template")
                 //TODO(CONTRIB): make sure to use the term "palette code" everywhere.
-                .arg(arg!(<PALETTE> "The palette code"))
+                .arg(arg!(<PALETTE> "The palette code. Example: 282936-E9E9F4-FF5555-FFB86C-F1FA8C-50FA7B-8BE9FD-BD93F9-FF79C6"))
                 .arg(arg!(<TEMPLATE> "path to template file"))
         )
         .subcommand(
             Command::new("preview")
                 .about("prints a table of all generated colors to preview")
-                .arg(arg!(<PALETTE> "The palette code"))
+                .arg(arg!(<PALETTE> "The palette code. Example: 282936-E9E9F4-FF5555-FFB86C-F1FA8C-50FA7B-8BE9FD-BD93F9-FF79C6"))
         )
         // .subcommand(
         //     Command::new("list-variables")
