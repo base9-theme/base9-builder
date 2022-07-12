@@ -265,28 +265,50 @@ fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
     Ok(variables_rc)
 }
 
-fn format_varialbes_helper(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> Data {
+fn color_to_formats(c: &Rgb, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_yaml::Value {
+    let mut data_map: Mapping = Mapping::new();
+    for (name, f) in formats {
+        data_map.insert(name.to_string().into(), f(c).into());
+    }
+    serde_yaml::Value::Mapping(data_map)
+}
+
+fn prefix_to_path(prefix: &Vec<String>) -> serde_yaml::Value {
+    let mut path: Mapping = Mapping::new();
+    path.insert("dotted".into(), prefix.join(".").into());
+    // let mut list = Vec::<serde_yaml::Value>::new();
+    // for (i, key) in prefix.iter().enumerate() {
+    //     let mut tmp = Mapping::new();
+    //     tmp.insert("key".into(), key.clone().into());
+    //     tmp.insert("last".into(), (i == prefix.len() - 1).into());
+    //     list.push(tmp.into());
+    // }
+    // path.insert("list".into(), list.into());
+    serde_yaml::Value::Mapping(path)
+}
+
+fn format_varialbes_helper2(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&str, fn(&Rgb) -> String)> ) {
     match &*color_map.deref().borrow() {
         ColorMap::Color(c) => {
-            let mut data_map: HashMap<String, Data> = HashMap::new();
-            for (name, f) in formats {
-                data_map.insert(name.to_string(), Data::String(f(c)));
-            }
-            Data::Map(data_map)
+            let mut mapping: Mapping = Mapping::new();
+            mapping.insert("path".into(), prefix_to_path(prefix));
+            mapping.insert("color".into(), color_to_formats(c, formats));
+            list.push(serde_yaml::Value::Mapping(mapping));
         }
         ColorMap::Map(map) => {
-            let mut data_map: HashMap<String, Data> = HashMap::new();
-
+            let mut mapping: Mapping = Mapping::new();
+            mapping.insert("path".into(), prefix_to_path(prefix));
+            list.push(serde_yaml::Value::Mapping(mapping));
             for (key, value) in map {
-                data_map.insert(key.clone(), format_varialbes_helper(value, formats));
+                prefix.push(key.clone());
+                format_varialbes_helper2(list, prefix, value, formats);
+                prefix.pop();
             }
-
-            Data::Map(data_map)
         }
     }
 }
 
-fn format_varialbes_helper2(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_yaml::Value {
+fn format_varialbes_helper(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_yaml::Value {
     match &*color_map.deref().borrow() {
         ColorMap::Color(c) => {
             let mut data_map: Mapping = Mapping::new();
@@ -299,11 +321,10 @@ fn format_varialbes_helper2(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&s
             let mut data_map: Mapping = Mapping::new();
 
             for (key, value) in map {
-                data_map.insert(key.clone().into(), format_varialbes_helper2(value, formats));
+                data_map.insert(key.clone().into(), format_varialbes_helper(value, formats));
             }
 
             serde_yaml::Value::Mapping(data_map)
-
         }
     }
 }
@@ -335,7 +356,13 @@ fn format_variables(_config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap
         ("dec_g", |x: &Rgb| format!("{}", x.green as f64 / 255.)),
         ("dec_b", |x: &Rgb| format!("{}", x.blue as f64 / 255.)),
     ];
-    format_varialbes_helper2(color_map, &formats)
+    let mut colors = format_varialbes_helper(color_map, &formats);
+    let mut list = Vec::<serde_yaml::Value>::new();
+    format_varialbes_helper2(&mut list, &mut Vec::<String>::new(), color_map, &formats);
+    let mapping = colors.as_mapping_mut().unwrap();
+    let list = Vec::from(&list[1..]);
+    mapping.insert("PROGRAMMABLE".into(), serde_yaml::Value::Sequence(list));
+    colors
 }
 
 fn mix1d(a: f32, b: f32, w: f32) -> f32 {

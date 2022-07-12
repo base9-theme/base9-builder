@@ -1,0 +1,6 @@
+let s:b9 = {}
+{{#PROGRAMMABLE}}
+{{^color}}s:b9.{{path.dotted}} = {};{{/color}}{{!
+}}{{#color}}s:b9.{{path.dotted}} = #{{hex}}{{/color}}
+{{/PROGRAMMABLE}}
+let g:base9_colors = s:b9;
