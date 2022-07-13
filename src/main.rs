@@ -6,7 +6,7 @@ use itertools::Itertools;
 use palette::{
     Srgb,
     Xyz,
-    Lab, IntoColor,
+    Lab, IntoColor, Hsl,
 };
 use std::cell::RefCell;
 use std::io::{self, Read};
@@ -209,8 +209,23 @@ fn add_colors(config: &serde_yaml::Value, current_map: Rc<RefCell<ColorMap>>, co
 }
 
 fn distance(c1: &Rgb, c2: &Rgb) -> i64 {
-    let ds = (c1.red as i64 - c2.red as i64, c1.green as i64 - c2.green as i64, c1.blue as i64 - c2.blue as i64);
-    ds.0*ds.0 + ds.1*ds.1 + ds.2*ds.2
+    let c1lab: Hsl = c1.into_format().into_color();
+    let c2lab: Hsl = c2.into_format().into_color();
+    let ds = ((c1lab.hue - c2lab.hue).to_degrees(), (c1lab.saturation - c2lab.saturation), (c1lab.lightness - c2lab.lightness));
+    ((ds.0 * ds.0 * 4. + ds.1*ds.1*1.).sqrt() * 100.) as i64
+
+    // let c1lch: Lch = c1.into_format().into_color();
+    // let c2lch: Lch = c2.into_format().into_color();
+    // let ds = ((c1lch.l - c2lch.l), (c1lch.chroma - c2lch.chroma), (c1lch.hue - c2lch.hue).to_degrees());
+    // ((ds.0 * ds.0 * 0. + ds.1*ds.1 * 1. + ds.2 * ds.2 * 4.).sqrt() * 100.) as i64
+
+    // let c1lab: Lab = c1.into_format().into_color();
+    // let c2lab: Lab = c2.into_format().into_color();
+    // let ds = ((c1lab.l - c2lab.l), (c1lab.a - c2lab.a), (c1lab.b - c2lab.b));
+    // ((ds.0*ds.0 + ds.1*ds.1 + ds.2*ds.2) * 1000000.) as i64
+
+    // let ds = (c1.red as i64 - c2.red as i64, c1.green as i64 - c2.green as i64, c1.blue as i64 - c2.blue as i64);
+    // ds.0*ds.0 + ds.1*ds.1 + ds.2*ds.2
 }
 
 fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
@@ -345,7 +360,7 @@ fn format_varialbes_helper(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&st
 
 fn format_variables(_config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
     let formats: Vec<(&str, fn(&Rgb) -> String)> = vec![
-        ("hex", |x: &Rgb| format!("{x:x}")),
+        ("hex", |x: &Rgb| format!("{:x}", x)),
         ("hex_r", |x: &Rgb| format!("{:x}", x.red)),
         ("hex_g", |x: &Rgb| format!("{:x}", x.green)),
         ("hex_b", |x: &Rgb| format!("{:x}", x.blue)),
@@ -385,3 +400,29 @@ fn mix(c1: &Rgb, c2: &Rgb, w: f32) -> Rgb {
     c3.into_format()
 }
 
+fn tmp_print(perm: &[&Rgb]) {
+    let mut r_s = String::new();
+    for i in 0..6 {
+        let r = perm[i];
+        r_s += &format!("{:x}-", r);
+    }
+    println!("{}", r_s);
+}
+
+fn tmp(relative_colors: &[Rgb], absolute_colors: &[(&str, Rgb)], order: Vec<usize>) -> i64 {
+    let mut sum = 0i64;
+    let mut r_s = String::new();
+    let mut a_s = String::new();
+    let mut d_s = String::new();
+    for i in 0..6 {
+        let r = relative_colors[order[i]];
+        let a = absolute_colors[i].1;
+        let d = distance(&a, &r);
+        sum += d;
+        r_s += &format!("{:x}-", r);
+        a_s += &format!("{:x}-", a);
+        d_s += &format!("{:06}-", d);
+    }
+    println!("{}\n{}\n{}{}", a_s, r_s, d_s, sum);
+    sum
+}
