@@ -6,7 +6,7 @@ use itertools::Itertools;
 use palette::{
     Srgb,
     Xyz,
-    Lab, IntoColor, Hsl,
+    Lab, IntoColor, Hsl, Lch,
 };
 use std::cell::RefCell;
 use std::io::{self, Read};
@@ -205,27 +205,6 @@ fn add_colors(config: &serde_yaml::Value, current_map: Rc<RefCell<ColorMap>>, co
         }
     }
     Ok(())
-    
-}
-
-fn distance(c1: &Rgb, c2: &Rgb) -> i64 {
-    let c1lab: Hsl = c1.into_format().into_color();
-    let c2lab: Hsl = c2.into_format().into_color();
-    let ds = ((c1lab.hue - c2lab.hue).to_degrees(), (c1lab.saturation - c2lab.saturation), (c1lab.lightness - c2lab.lightness));
-    ((ds.0 * ds.0 * 4. + ds.1*ds.1*1.).sqrt() * 100.) as i64
-
-    // let c1lch: Lch = c1.into_format().into_color();
-    // let c2lch: Lch = c2.into_format().into_color();
-    // let ds = ((c1lch.l - c2lch.l), (c1lch.chroma - c2lch.chroma), (c1lch.hue - c2lch.hue).to_degrees());
-    // ((ds.0 * ds.0 * 0. + ds.1*ds.1 * 1. + ds.2 * ds.2 * 4.).sqrt() * 100.) as i64
-
-    // let c1lab: Lab = c1.into_format().into_color();
-    // let c2lab: Lab = c2.into_format().into_color();
-    // let ds = ((c1lab.l - c2lab.l), (c1lab.a - c2lab.a), (c1lab.b - c2lab.b));
-    // ((ds.0*ds.0 + ds.1*ds.1 + ds.2*ds.2) * 1000000.) as i64
-
-    // let ds = (c1.red as i64 - c2.red as i64, c1.green as i64 - c2.green as i64, c1.blue as i64 - c2.blue as i64);
-    // ds.0*ds.0 + ds.1*ds.1 + ds.2*ds.2
 }
 
 fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
@@ -260,12 +239,35 @@ fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
             ("magenta", Srgb::from_u32::<Argb>(0xff00ff)),
         ];
 
-        let relative_colors = colors.into_iter().permutations(6).min_by_key(|perm| {
-            let mut sum: i64 = 0;
-            for ((_, c1), c2) in absolute_colors.iter().zip_eq(perm) {
-                sum += distance(&c1, c2);
+        let average = {
+          let mut mut_average: (f32, f32, f32) = (0.,0.,0.);
+            for c in colors {
+                let lab: Lab = c.into_format().into_color();
+                mut_average.0 += lab.l;
+                mut_average.1 += lab.a;
+                mut_average.2 += lab.b;
             }
-            sum
+            mut_average.0 /= colors.len() as f32;
+            mut_average.1 /= colors.len() as f32;
+            mut_average.2 /= colors.len() as f32;
+            mut_average
+        };
+
+        let relative_colors = colors.into_iter().permutations(6).min_by_key(|perm| {
+            let mut sum: f32 = 0.;
+            for ((_, ca), cr) in absolute_colors.iter().zip_eq(perm) {
+                let mut ca: Lab = ca.into_format().into_color();
+                let mut cr: Lab = cr.into_format().into_color();
+                cr.a-=average.1;
+                cr.b-=average.2;
+                let ca: Lch = ca.into_color();
+                let cr: Lch = cr.into_color();
+                let ds = ((ca.l - cr.l), (ca.chroma - cr.chroma), (ca.hue - cr.hue).to_degrees());
+                let weight = (0., 1., 6.);
+                let tmp_sum = (ds.0 * ds.0 * weight.0 + ds.1*ds.1 * weight.1 + ds.2*ds.2*weight.2).sqrt();
+                sum += tmp_sum;
+            }
+            (sum * 1000.) as i64;
         }).unwrap();
 
         for (color, (name, _)) in relative_colors.into_iter().zip_eq(absolute_colors) {
@@ -358,7 +360,7 @@ fn format_varialbes_helper(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&st
 //     }
 // }
 
-fn format_variables(_config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
+fn format_variables(config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
     let formats: Vec<(&str, fn(&Rgb) -> String)> = vec![
         ("hex", |x: &Rgb| format!("{:x}", x)),
         ("hex_r", |x: &Rgb| format!("{:x}", x.red)),
@@ -377,6 +379,9 @@ fn format_variables(_config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap
     let mapping = colors.as_mapping_mut().unwrap();
     let list = Vec::from(&list[1..]);
     mapping.insert("PROGRAMMABLE".into(), serde_yaml::Value::Sequence(list));
+
+    let palette = config.as_mapping().unwrap().get(&"palette".to_string().into()).unwrap().as_str().unwrap();
+    mapping.insert("PALETTE".into(), palette.into());
     colors
 }
 
