@@ -22,8 +22,11 @@ use mustache::{Data, compile_path, compile_str};
 use regex::Regex;
 use serde_yaml::{self, Mapping};
 
+mod utils;
+mod color_science;
+use color_science::Rgb;
+
 const N: usize = 9;
-type Rgb = Srgb<u8>;
 type Palette = [Rgb;N];
 
 fn default_config() -> Result<serde_yaml::Value> {
@@ -50,6 +53,9 @@ fn cli() -> Command<'static> {
                 //TODO(CONTRIB): make sure to use the term "palette code" everywhere.
                 .arg(arg!(<PALETTE> "The palette code. Example: 282936-E9E9F4-FF5555-FFB86C-F1FA8C-50FA7B-8BE9FD-BD93F9-FF79C6"))
                 .arg(arg!(<TEMPLATE> "path to template file"))
+                .arg(
+                    arg!([DEST] "path to write to")
+                    .value_parser(clap::value_parser!(std::path::PathBuf)))
         )
         .subcommand(
             Command::new("preview")
@@ -64,7 +70,10 @@ fn cli() -> Command<'static> {
 }
 
 fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Value> {
-    let palette_arg = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
+    let mut palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
+    if palette_arg == "-" {
+        palette_arg = "001153-CAD1EA-F958A8-E3C0AE-97BDA5-00B8DC-00ABFF-968DFF-EE8394";
+    }
 
     let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
     if !re.is_match(palette_arg) {
@@ -95,7 +104,14 @@ fn main() -> Result<()> {
             } else {
                 compile_path(template_arg)
             }?;
-            template.render(&mut io::stdout(), &formatted_variables)?;
+            match sub_matches.get_one::<PathBuf>("DEST") {
+                None => template.render(&mut io::stdout(), &formatted_variables)?,
+                Some(dest) => {
+                    let mut dest_file = utils::get_write(&dest)?;
+                    template.render(&mut dest_file, &formatted_variables)?
+                },
+            };
+
             return Ok(());
         }
         Some(("preview", sub_matches)) => {
@@ -162,7 +178,7 @@ fn new_color_shade_map(color: &Rgb, bg: &Rgb, config: &serde_yaml::Value) -> Res
     let shades = config.as_mapping().unwrap().get(&"shades".into()).unwrap().as_mapping().unwrap();
     for (key, value) in shades {
         let ratio = value.as_f64().unwrap() as f32;
-        map.insert_color(key.as_str().unwrap().to_string(), mix(bg, color, ratio))?;
+        map.insert_color(key.as_str().unwrap().to_string(), color_science::mix(bg, color, ratio))?;
     }
 
     Ok(Rc::new(RefCell::new(map)))
@@ -239,44 +255,11 @@ fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
             ("magenta", Srgb::from_u32::<Argb>(0xff00ff)),
         ];
 
-        let average = {
-          let mut mut_average: (f32, f32, f32) = (0.,0.,0.);
-            for c in colors {
-                let lab: Lab = c.into_format().into_color();
-                mut_average.0 += lab.l;
-                mut_average.1 += lab.a;
-                mut_average.2 += lab.b;
-            }
-            mut_average.0 /= colors.len() as f32;
-            mut_average.1 /= colors.len() as f32;
-            mut_average.2 /= colors.len() as f32;
-            mut_average
-        };
-
-        let relative_colors = colors.into_iter().permutations(6).min_by_key(|perm| {
-            let mut sum: f32 = 0.;
-            for ((_, ca), cr) in absolute_colors.iter().zip_eq(perm) {
-                let mut ca: Lab = ca.into_format().into_color();
-                let mut cr: Lab = cr.into_format().into_color();
-                cr.a-=average.1;
-                cr.b-=average.2;
-                let ca: Lch = ca.into_color();
-                let cr: Lch = cr.into_color();
-                let ds = ((ca.l - cr.l), (ca.chroma - cr.chroma), (ca.hue - cr.hue).to_degrees());
-                let weight = (0., 1., 6.);
-                let tmp_sum = (ds.0 * ds.0 * weight.0 + ds.1*ds.1 * weight.1 + ds.2*ds.2*weight.2).sqrt();
-                sum += tmp_sum;
-            }
-            (sum * 1000.) as i64;
-        }).unwrap();
+        let relative_colors = color_science::closest_order(colors, &absolute_colors.iter().map(|x| x.1).collect_vec());
 
         for (color, (name, _)) in relative_colors.into_iter().zip_eq(absolute_colors) {
-            variables.insert(name.to_string(), new_color_shade_map(color, &bg, config)?)?;
+            variables.insert(name.to_string(), new_color_shade_map(&color, &bg, config)?)?;
         }
-
-        
-
-
     }
     add_colors(config.as_mapping().unwrap().get(&"colors".into()).unwrap(), variables_rc.clone(), variables_rc.clone())?;
     Ok(variables_rc)
@@ -385,25 +368,6 @@ fn format_variables(config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>
     colors
 }
 
-fn mix1d(a: f32, b: f32, w: f32) -> f32 {
-    return a*(1.-w)+b*w;
-}
-
-fn mix(c1: &Rgb, c2: &Rgb, w: f32) -> Rgb {
-    let c1_xyz: Xyz = c1.into_format().into_color_unclamped();
-    let c2_xyz: Xyz = c2.into_format().into_color_unclamped();
-    let c1_lab: Lab = c1_xyz.into_color_unclamped();
-    let c2_lab: Lab = c2_xyz.into_color();
-    let c1_contrast = (c1_xyz.y + 0.05).ln();
-    let c2_contrast = (c2_xyz.y + 0.05).ln();
-    let c3_contrast = mix1d(c1_contrast, c2_contrast, w);
-    let c3y = c3_contrast.exp() - 0.05;
-    let c3l_lab: Lab = Xyz::new(0., c3y, 0.).into_color_unclamped();
-    let c3 = Lab::new(c3l_lab.l, mix1d(c1_lab.a, c2_lab.a, w), mix1d(c1_lab.b, c2_lab.b, w));
-
-    let c3: Srgb = c3.into_color_unclamped();
-    c3.into_format()
-}
 
 fn tmp_print(perm: &[&Rgb]) {
     let mut r_s = String::new();
@@ -412,22 +376,4 @@ fn tmp_print(perm: &[&Rgb]) {
         r_s += &format!("{:x}-", r);
     }
     println!("{}", r_s);
-}
-
-fn tmp(relative_colors: &[Rgb], absolute_colors: &[(&str, Rgb)], order: Vec<usize>) -> i64 {
-    let mut sum = 0i64;
-    let mut r_s = String::new();
-    let mut a_s = String::new();
-    let mut d_s = String::new();
-    for i in 0..6 {
-        let r = relative_colors[order[i]];
-        let a = absolute_colors[i].1;
-        let d = distance(&a, &r);
-        sum += d;
-        r_s += &format!("{:x}-", r);
-        a_s += &format!("{:x}-", a);
-        d_s += &format!("{:06}-", d);
-    }
-    println!("{}\n{}\n{}{}", a_s, r_s, d_s, sum);
-    sum
 }
