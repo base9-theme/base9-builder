@@ -70,22 +70,16 @@ fn cli() -> Command<'static> {
 }
 
 fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Value> {
-    let mut palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
-    if palette_arg == "-" {
-        palette_arg = "001153-CAD1EA-F958A8-E3C0AE-97BDA5-00B8DC-00ABFF-968DFF-EE8394";
-    }
-
-    let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
-    if !re.is_match(palette_arg) {
-        bail!("color palette in wrong format.");
-    }
-
-    // Add config
     let mut config = default_config()?;
-    {
+    let mut palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
+
+    if palette_arg != "-" {
         let config_map = config.as_mapping_mut().ok_or(anyhow!("config not an object"))?;
         config_map.insert("palette".to_string().into(), palette_arg.to_string().into());
     }
+
+
+    // Add config
 
     let variables = get_variables(&config)?;
     Ok(format_variables(&config, &variables))

@@ -1,5 +1,5 @@
-palette: xxx
-color_space: lab + contrast
+palette: "001153-cad1ea-f958a8-e3c0ae-97bda5-00b8dc-00abff-968dff-ee8394"
+# color_space: lab + contrast
 shades:
   p10: 0.1
   p25: 0.25
@@ -101,7 +101,7 @@ colors:
   debug: c5 # anything related to debugging
 
   # absolute
-  # error: red
-  # good: green
-  # warning: yellow
-  # info: blue
+  error: red
+  succeed: green
+  warning: yellow
+  info: blue
