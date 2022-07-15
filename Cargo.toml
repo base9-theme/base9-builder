@@ -10,7 +10,6 @@ palette = "0.6"
 mustache = "0.9"
 clap = { version = "3.0", features = ["cargo"] }
 regex = "1.5"
-serde_json = "1"
 serde_yaml = "0.8"
 anyhow = "1"
 itertools = "0.8"
