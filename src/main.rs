@@ -1,4 +1,5 @@
 
+use config::Config;
 use palette::convert::IntoColorUnclamped;
 use palette::rgb::channels::Argb;
 use clap::{arg, command, ArgAction, Command, ArgMatches};
@@ -24,15 +25,14 @@ use serde_yaml::{self, Mapping};
 
 mod utils;
 mod color_science;
+mod config;
 use color_science::Rgb;
 
 const N: usize = 9;
 type Palette = [Rgb;N];
 
-fn default_config() -> Result<serde_yaml::Value> {
-    let yaml_str = include_str!("default_config.yml");
-    let config = serde_yaml::from_str(yaml_str)?;
-    Ok(config)
+fn default_config() -> Config {
+    serde_yaml::from_str(include_str!("default_config.yml")).unwrap()
 }
 
 fn read_stdin() -> Result<String> {
@@ -51,16 +51,16 @@ fn cli() -> Command<'static> {
             Command::new("render")
                 .about("renders theme template")
                 //TODO(CONTRIB): make sure to use the term "palette code" everywhere.
-                .arg(arg!(<PALETTE> "The palette code. Example: 282936-E9E9F4-FF5555-FFB86C-F1FA8C-50FA7B-8BE9FD-BD93F9-FF79C6"))
-                .arg(arg!(<TEMPLATE> "path to template file"))
+                .arg(arg!(<PALETTE> "the palette code. use `-` for default palette."))
+                .arg(arg!(<TEMPLATE> "path to template file. Use `-` to read from stdin."))
                 .arg(
-                    arg!([DEST] "path to write to")
+                    arg!([DEST] "path to write output to.")
                     .value_parser(clap::value_parser!(std::path::PathBuf)))
         )
         .subcommand(
             Command::new("preview")
                 .about("prints a table of all generated colors to preview")
-                .arg(arg!(<PALETTE> "The palette code. Example: 282936-E9E9F4-FF5555-FFB86C-F1FA8C-50FA7B-8BE9FD-BD93F9-FF79C6"))
+                .arg(arg!(<PALETTE> "the palette code. use `-` for default palette."))
         )
         // .subcommand(
         //     Command::new("list-variables")
@@ -70,14 +70,12 @@ fn cli() -> Command<'static> {
 }
 
 fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Value> {
-    let mut config = default_config()?;
+    let mut config = default_config();
     let mut palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
 
     if palette_arg != "-" {
-        let config_map = config.as_mapping_mut().ok_or(anyhow!("config not an object"))?;
-        config_map.insert("palette".to_string().into(), palette_arg.to_string().into());
+        config.palette = config::parse_palette(palette_arg)?;
     }
-
 
     // Add config
 
@@ -167,75 +165,56 @@ impl ColorMap {
     }
 }
 
-fn new_color_shade_map(color: &Rgb, bg: &Rgb, config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
+fn new_color_shade_map(color: &Rgb, bg: &Rgb, config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
     let mut map = ColorMap::new_map();
-    let shades = config.as_mapping().unwrap().get(&"shades".into()).unwrap().as_mapping().unwrap();
-    for (key, value) in shades {
-        let ratio = value.as_f64().unwrap() as f32;
-        map.insert_color(key.as_str().unwrap().to_string(), color_science::mix(bg, color, ratio))?;
+    for (key, value) in &config.shades {
+        map.insert_color(key.clone(), color_science::mix(bg, color, *value))?;
     }
 
     Ok(Rc::new(RefCell::new(map)))
 }
 
-fn add_colors(config: &serde_yaml::Value, current_map: Rc<RefCell<ColorMap>>, color_map: Rc<RefCell<ColorMap>>) -> Result<()> {
-    if !config.is_mapping() {
-        bail!("config not a map");
-    }
-    let config_map = config.as_mapping().unwrap();
-    for (key, value) in config_map {
+fn add_colors(aliases: &HashMap<String, config::ColorNames>, current_map: Rc<RefCell<ColorMap>>, color_map: Rc<RefCell<ColorMap>>) -> Result<()> {
+    for (key, value) in aliases {
         match value {
-            serde_yaml::Value::String(reference) => {
-                // println!("begin");
-                // match &value {
-                //     serde_yaml::Value::String(s) => println!("{}", s),
-                //     _ => println!("xxx"),
-                // };
-                if reference.eq("BUILT_IN") {
-                    continue;
-                }
+            config::ColorNames::BuiltIn => {},
+            config::ColorNames::Reference(reference) => {
                 let mut ptr: Rc<RefCell<ColorMap>> = color_map.clone();
-                for v in reference.split('.') {
+                for k in reference.key_iter() {
                     let tmp = match &*ptr.deref().borrow() {
                         ColorMap::Color(_) => bail!("..."),
-                        ColorMap::Map(map) => map.get(v).unwrap().clone(),
+                        ColorMap::Map(map) => map.get(k).unwrap().clone(),
                     };
                     ptr = tmp;
                 }
-                (&mut *current_map.deref().borrow_mut()).insert(key.as_str().unwrap().to_string(), ptr.clone())?;
+                (&mut *current_map.deref().borrow_mut()).insert(key.clone(), ptr.clone())?;
             },
-            serde_yaml::Value::Mapping(_) => {
+            config::ColorNames::Mapping(tmp) => {
                 let map2 = Rc::new(RefCell::new(ColorMap::new_map()));
-                add_colors(value, map2.clone(), color_map.clone())?;
-                (&mut *current_map.deref().borrow_mut()).insert(key.as_str().unwrap().to_string(), map2)?;
+                add_colors(tmp, map2.clone(), color_map.clone())?;
+                (&mut *current_map.deref().borrow_mut()).insert(key.clone(), map2)?;
             },
             _ => bail!("other value types"),
-        }
-        if value.is_string() {
         }
     }
     Ok(())
 }
 
-fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
-    let config_mapping = config.as_mapping().ok_or(anyhow!("config not an object"))?;
-    let palette = config_mapping.get(&"palette".into()).ok_or(anyhow!("missing palette"))?
-        .as_str().ok_or(anyhow!("palette not a string"))?;
-    let palette = parse_palette(palette)?;
+fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
 
     let variables_rc = Rc::new(RefCell::new(ColorMap::new_map()));
     {
         let variables = &mut *variables_rc.deref().borrow_mut();
 
-        let bg = palette[0];
+        let bg = config.palette.colors[0];
         variables.insert_color("background".into(), bg)?;
 
-        let fg = palette[1];
+        let fg = config.palette.colors[1];
         variables.insert("foreground".into(), new_color_shade_map(&fg, &bg, config)?)?;
 
         // c1...c7
-        let colors = &palette[2..9];
-        for (i, c) in colors.iter().enumerate() {
+        let hues = &config.palette.colors[2..9];
+        for (i, c) in hues.iter().enumerate() {
             let name = format!("c{}", i+1);
             variables.insert(name, new_color_shade_map(c, &bg, config)?)?;
         }
@@ -249,13 +228,13 @@ fn get_variables(config: &serde_yaml::Value) -> Result<Rc<RefCell<ColorMap>>> {
             ("magenta", Srgb::from_u32::<Argb>(0xff00ff)),
         ];
 
-        let relative_colors = color_science::closest_order(colors, &absolute_colors.iter().map(|x| x.1).collect_vec());
+        let relative_colors = color_science::closest_order(hues, &absolute_colors.iter().map(|x| x.1).collect_vec());
 
         for (color, (name, _)) in relative_colors.into_iter().zip_eq(absolute_colors) {
             variables.insert(name.to_string(), new_color_shade_map(&color, &bg, config)?)?;
         }
     }
-    add_colors(config.as_mapping().unwrap().get(&"colors".into()).unwrap(), variables_rc.clone(), variables_rc.clone())?;
+    add_colors(&config.colors, variables_rc.clone(), variables_rc.clone())?;
     Ok(variables_rc)
 }
 
@@ -337,7 +316,7 @@ fn format_varialbes_helper(color_map: &Rc<RefCell<ColorMap>>, formats: &Vec<(&st
 //     }
 // }
 
-fn format_variables(config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
+fn format_variables(config: &Config, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
     let formats: Vec<(&str, fn(&Rgb) -> String)> = vec![
         ("hex", |x: &Rgb| format!("{:x}", x)),
         ("hex_r", |x: &Rgb| format!("{:x}", x.red)),
@@ -357,8 +336,7 @@ fn format_variables(config: &serde_yaml::Value, color_map: &Rc<RefCell<ColorMap>
     let list = Vec::from(&list[1..]);
     mapping.insert("PROGRAMMABLE".into(), serde_yaml::Value::Sequence(list));
 
-    let palette = config.as_mapping().unwrap().get(&"palette".to_string().into()).unwrap().as_str().unwrap();
-    mapping.insert("PALETTE".into(), palette.into());
+    mapping.insert("PALETTE".into(), config.palette.colors.map(|x| format!("{:x}", x)).join("-").into());
     colors
 }
 

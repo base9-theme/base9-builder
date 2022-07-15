@@ -1,5 +1,14 @@
 palette: "001153-cad1ea-f958a8-e3c0ae-97bda5-00b8dc-00abff-968dff-ee8394"
 # color_space: lab + contrast
+# todo: # TODO: how to generate todo colors?
+absolute:
+  goal:
+    red: "#ff0000"
+    yellow: "#ffff00"
+    green: "#00ff00"
+    cyan: "#00ffff"
+    blue: "#0000ff"
+    magenta: "#ff00ff"
 shades:
   p10: 0.1
   p25: 0.25
