@@ -30,7 +30,7 @@ const N: usize = 9;
 type Palette = [Rgb;N];
 
 fn default_config() -> Result<serde_yaml::Value> {
-    let yaml_str = include_str!("default_config.yaml");
+    let yaml_str = include_str!("default_config.yml");
     let config = serde_yaml::from_str(yaml_str)?;
     Ok(config)
 }

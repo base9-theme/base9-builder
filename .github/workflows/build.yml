@@ -1,26 +1,27 @@
 # .github/workflows/build.yml
-name: Build
-
 on:
   push:
     branches: [master]
 
+name: CI
 jobs:
-  build:
-    name: Build
+  build_and_test:
+    name: Rust project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - name: Compile
-        id: compile
-        uses: rust-build/rust-build.action@v1.3.2
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          RUSTTARGET: x86_64-unknown-linux-musl
-          UPLOAD_MODE: none
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
         with:
-          name: Binary
-          path: |
-            ${{ steps.compile.outputs.BUILT_ARCHIVE }}
-            ${{ steps.compile.outputs.BUILT_CHECKSUM }}
+          command: build
+          args: --release --all-features
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            target/release/base9-builder
