@@ -1,6 +1,6 @@
-palette: "001153-cad1ea-f958a8-e3c0ae-97bda5-00b8dc-00abff-968dff-ee8394"
+palette: "232323-f7f7f7-e9ff70-70d6ff-ff9770-ffd670-ffa0c5-9df87e-c79cff"
 # color_space: lab + contrast
-# todo: # TODO: how to generate todo colors?
+# todo: # TODO: how to generate todo colors?001153-cad1ea-f958a8-e3c0ae-97bda5-00b8dc-00abff-968dff-ee8394"
 absolute:
   goal:
     red: "#ff0000"
