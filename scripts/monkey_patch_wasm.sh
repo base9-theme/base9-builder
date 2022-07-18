@@ -1,6 +1,7 @@
 #!/bin/bash
-cd "$(dirname "$0")"
-DTS_FILE="../pkg/base9_builder.d.ts"
+# run in repo directory
+
+DTS_FILE="pkg/base9_builder.d.ts"
 
 function fix_type() {
     echo "Changing $1 to return $2"
