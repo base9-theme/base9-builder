@@ -17,6 +17,17 @@ jobs:
         with:
           command: build
           args: --release --all-features
+      - name: docker
+        run: |
+          docker build -t base9-builder:latest .
+          docker run -name current -i base9-builder:latest
+      - name: copy
+        run: |
+          docker cp current:/app/target/release/base9-builder ./
+          docker cp -r current:/app/pkg ./
+      - name: manula_test
+        run: |
+          ls .
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
