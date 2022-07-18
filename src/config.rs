@@ -2,8 +2,13 @@ use std::{collections::HashMap, fmt::{self}};
 use palette::Srgb;
 use regex::Regex;
 use serde::{Serialize, Deserialize, de::{Visitor, self}, Deserializer};
+use anyhow::anyhow;
 
 pub type Rgb = Srgb<u8>;
+
+pub fn default_config() -> Config {
+    serde_yaml::from_str(include_str!("default_config.yml")).unwrap()
+}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -12,22 +17,14 @@ pub struct Config {
     pub colors: HashMap<String, ColorNames>,
 }
 
-pub fn parse_palette(s: &str) -> Result<Palette, serde::de::value::Error>  {
-    PaletteVisitor{}.visit_str(s)
-}
-
 impl Config {
-    pub fn tmp() -> Config {
-        Config {
-            palette: parse_palette("001153-cad1ea-f958a8-e3c0ae-97bda5-00b8dc-00abff-968dff-ee8394").unwrap(),
-            shades: HashMap::from([
-                ("p10".to_string(), 1.),
-            ]),
-            colors: HashMap::from([
-                ("x".into(), ColorNames::Mapping(HashMap::new())),
-                ("y".into(), ColorNames::Reference(Reference{ string: "color".to_string() })),
-            ]),
-        }
+    pub fn default() -> Config {
+        serde_yaml::from_str(include_str!("default_config.yml")).unwrap()
+    }
+    pub fn from_palette(palette: &str) -> Result<Config, anyhow::Error> {
+        let mut config = Self::default();
+        config.palette = Palette::from_str(palette).map_err(|x| anyhow!("{}", x))?;
+        Ok(config)
     }
 }
 
@@ -119,6 +116,21 @@ impl<'de> Deserialize<'de> for ColorNames {
 pub struct Palette {
     pub colors: [Rgb;9]
 }
+impl Palette {
+    pub fn from_str(s: &str) -> Result<Palette, String> {
+        let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
+        if !re.is_match(s) {
+            return Err(format!("color palette in wrong format: {}", s));
+        }
+
+        Ok(Palette { colors: s.split('-').map(|s| {
+            let r = u8::from_str_radix(&s[0..2], 16).unwrap();
+            let g = u8::from_str_radix(&s[2..4], 16).unwrap();
+            let b = u8::from_str_radix(&s[4..6], 16).unwrap();
+            return Srgb::from_components((r,g,b));
+        }).collect::<Vec<Rgb>>().try_into().unwrap()})
+    }
+}
 
 impl Serialize for Palette {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -143,17 +155,7 @@ impl<'de> Visitor<'de> for PaletteVisitor {
     where
         E: de::Error,
     {
-        let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
-        if !re.is_match(s) {
-            return Err(E::custom("color palette in wrong format"));
-        }
-
-        Ok(Palette { colors: s.split('-').map(|s| {
-            let r = u8::from_str_radix(&s[0..2], 16).unwrap();
-            let g = u8::from_str_radix(&s[2..4], 16).unwrap();
-            let b = u8::from_str_radix(&s[4..6], 16).unwrap();
-            return Srgb::from_components((r,g,b));
-        }).collect::<Vec<Rgb>>().try_into().unwrap()})
+        Palette::from_str(s).map_err(|x| E::custom(x))
     }
 }
 
