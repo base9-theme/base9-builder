@@ -17,4 +17,4 @@ Cargo.lock
 node_modules
 
 # --- custom
-tmp
+tmp.*

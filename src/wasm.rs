@@ -2,16 +2,17 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{config, base9};
 use crate::base9::ColorMap;
+use mustache::compile_str;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
 
-type NestedObj<T> = {
+export type NestedObj<T> = {
     [index: string]: T|NestedObj<T>;
 }
 
-type Formatted = {
+export type Formatted = {
     hex: string,
     hex_r: string,
     hex_g: string,
@@ -39,6 +40,7 @@ type Data = {
 
 "#;
 
+//TODO
 pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
     // `set_panic_hook` function at least once during initialization, and then
@@ -57,18 +59,18 @@ pub fn set_panic_hook() {
 // #[global_allocator]
 // static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
+// #[wasm_bindgen]
+// extern {
+//     fn alert(s: &str);
+// }
 
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, wasm-test!");
-}
+// #[wasm_bindgen]
+// pub fn greet() {
+//     alert("Hello, wasm-test!");
+// }
 
-#[wasm_bindgen]
-pub fn palette_to_data(palette: &str) -> Result<JsValue, JsError> {
+#[wasm_bindgen(js_name=getData)]
+pub fn get_data(palette: &str) -> Result<JsValue, JsError> {
     let mut config = config::default_config();
     config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
 
@@ -77,8 +79,8 @@ pub fn palette_to_data(palette: &str) -> Result<JsValue, JsError> {
     JsValue::from_serde(&formatted_variables).map_err(|x| JsError::new(&x.to_string()))
 }
 
-#[wasm_bindgen]
-pub fn palette_to_color_hash(palette: &str) -> Result<JsValue, JsError> {
+#[wasm_bindgen(js_name=getColors)]
+pub fn get_colors(palette: &str) -> Result<JsValue, JsError> {
     let mut config = config::default_config();
     config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
 
@@ -87,6 +89,14 @@ pub fn palette_to_color_hash(palette: &str) -> Result<JsValue, JsError> {
     JsValue::from_serde(&formatted_variables).map_err(|x| JsError::new(&x.to_string()))
 }
 
-pub fn render_str(palette: &str) -> Result<JsValue, JsError> {
-    Ok("".into())
+#[wasm_bindgen(js_name=renderString)]
+pub fn render_str(palette: &str, template_str: &str) -> Result<JsValue, JsError> {
+    let mut config = config::default_config();
+    config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+
+    let variables = base9::get_variables(&config).map_err(|x| JsError::new(&x.to_string()))?;
+    let formatted_variables = base9::format_variables(&config, &variables);
+    let template = compile_str(&template_str).unwrap();
+    Ok(template.render_to_string(&formatted_variables).unwrap().into())
+
 }

@@ -109,7 +109,7 @@ fn main() -> Result<()> {
         }
         Some(("preview", sub_matches)) => {
             let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
-            compile_str(include_str!("preview.mustache"))?.render(&mut io::stdout(), &formatted_variables)?;
+            compile_str(include_str!("../templates/preview.mustache"))?.render(&mut io::stdout(), &formatted_variables)?;
         }
         Some(("list-variables", sub_matches)) => {
             let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
