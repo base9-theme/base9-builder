@@ -54,8 +54,6 @@ console.log(rendered); // foreground: e9e9f4
 
 ```
 
-Currently, all functions return `any`. Typescript support comming soon.
-
 ## Node.js
 
 Not supported

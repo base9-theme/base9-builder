@@ -139,6 +139,8 @@ fn color_to_formats(c: &Rgb, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serd
 fn prefix_to_path(prefix: &Vec<String>) -> serde_yaml::Value {
     let mut path: Mapping = Mapping::new();
     path.insert("dotted".into(), prefix.join(".").into());
+    path.insert("indent".into(), " ".repeat(prefix.len()).into());
+    path.insert("last".into(), prefix.last().unwrap_or(&"".to_string()).to_string().into());
     // let mut list = Vec::<serde_yaml::Value>::new();
     // for (i, key) in prefix.iter().enumerate() {
     //     let mut tmp = Mapping::new();
@@ -161,12 +163,17 @@ fn list_color_map(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, c
         ColorMap::Map(map) => {
             let mut mapping: Mapping = Mapping::new();
             mapping.insert("path".into(), prefix_to_path(prefix));
+            mapping.insert("begin".into(), true.into());
             list.push(serde_yaml::Value::Mapping(mapping));
             for (key, value) in map {
                 prefix.push(key.clone());
                 list_color_map(list, prefix, value, f);
                 prefix.pop();
             }
+            let mut mapping: Mapping = Mapping::new();
+            mapping.insert("path".into(), prefix_to_path(prefix));
+            mapping.insert("end".into(), true.into());
+            list.push(serde_yaml::Value::Mapping(mapping));
         }
     }
 }
@@ -229,7 +236,7 @@ pub(crate) fn format_variables(config: &Config, color_map: &Rc<RefCell<ColorMap>
     let mut list = Vec::<serde_yaml::Value>::new();
     list_color_map(&mut list, &mut Vec::<String>::new(), color_map, color_to_format);
     let mapping = colors.as_mapping_mut().unwrap();
-    let list = Vec::from(&list[1..]);
+    let list = Vec::from(&list[1..(list.len()-1)]);
     mapping.insert("PROGRAMMABLE".into(), serde_yaml::Value::Sequence(list));
 
     mapping.insert("PALETTE".into(), config.palette.colors.map(|x| format!("{:x}", x)).join("-").into());
