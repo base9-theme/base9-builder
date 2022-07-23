@@ -1,11 +1,11 @@
 
 use base9::{get_variables, format_variables};
 use config::{Config, default_config};
-use palette::convert::IntoColorUnclamped;
-use palette::rgb::channels::Argb;
+use ext_palette::convert::IntoColorUnclamped;
+use ext_palette::rgb::channels::Argb;
 use clap::{arg, command, ArgAction, Command, ArgMatches};
 use itertools::Itertools;
-use palette::{
+use ext_palette::{
     Srgb,
     Xyz,
     Lab, IntoColor, Hsl, Lch,
@@ -15,6 +15,7 @@ use std::io::{self, Read};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::{
     collections::HashMap,
     env,
@@ -28,13 +29,11 @@ mod utils;
 mod color_science;
 mod base9;
 mod config;
+mod palette;
 use color_science::Rgb;
+pub type Color = ext_palette::Srgb<u8>;
 
 const N: usize = 9;
-type Palette = [Rgb;N];
-
-
-
 
 fn read_stdin() -> Result<String> {
     let mut buf = String::new();
@@ -75,7 +74,7 @@ fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Va
     let palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
 
     if palette_arg != "-" {
-        config.palette = config::Palette::from_str(palette_arg).map_err(|x| anyhow!("{}", x))?;
+        config.palette = palette::Palette::from_str(palette_arg).map_err(|x| anyhow!("{}", x))?;
     }
 
     // Add config

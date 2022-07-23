@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use palette::{Srgb, Xyz, Lab, convert::IntoColorUnclamped, IntoColor, Lch};
+use ext_palette::{Srgb, Xyz, Lab, convert::IntoColorUnclamped, IntoColor, Lch};
 
 pub type Rgb = Srgb<u8>;
 

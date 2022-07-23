@@ -1,7 +1,9 @@
+use std::str::FromStr;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{config, base9};
 use crate::base9::ColorMap;
+use crate::Palette;
 use mustache::compile_str;
 use wasm_bindgen::prelude::*;
 
@@ -71,8 +73,8 @@ pub fn set_panic_hook() {
 
 #[wasm_bindgen(js_name=getData)]
 pub fn get_data(palette: &str) -> Result<JsValue, JsError> {
-    let mut config = config::default_config();
-    config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let palette = Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let config = config::Config::from_palette(palette);
 
     let variables = base9::get_variables(&config).map_err(|x| JsError::new(&x.to_string()))?;
     let formatted_variables = base9::format_variables(&config, &variables);
@@ -81,8 +83,8 @@ pub fn get_data(palette: &str) -> Result<JsValue, JsError> {
 
 #[wasm_bindgen(js_name=getColors)]
 pub fn get_colors(palette: &str) -> Result<JsValue, JsError> {
-    let mut config = config::default_config();
-    config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let palette = Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let config = config::Config::from_palette(palette);
 
     let variables = base9::get_variables(&config).map_err(|x| JsError::new(&x.to_string()))?;
     let formatted_variables = base9::map_color_map(&variables, |c| format!("#{:x}", c).into());
@@ -91,8 +93,8 @@ pub fn get_colors(palette: &str) -> Result<JsValue, JsError> {
 
 #[wasm_bindgen(js_name=renderString)]
 pub fn render_str(palette: &str, template_str: &str) -> Result<JsValue, JsError> {
-    let mut config = config::default_config();
-    config.palette = config::Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let palette = Palette::from_str(palette).map_err(|x| JsError::new(&x))?;
+    let config = config::Config::from_palette(palette);
 
     let variables = base9::get_variables(&config).map_err(|x| JsError::new(&x.to_string()))?;
     let formatted_variables = base9::format_variables(&config, &variables);

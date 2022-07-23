@@ -1,9 +1,9 @@
 
-use palette::convert::IntoColorUnclamped;
-use palette::rgb::channels::Argb;
+use ext_palette::convert::IntoColorUnclamped;
+use ext_palette::rgb::channels::Argb;
 use clap::{arg, command, ArgAction, Command, ArgMatches};
 use itertools::Itertools;
-use palette::{
+use ext_palette::{
     Srgb,
     Xyz,
     Lab, IntoColor, Hsl, Lch,
@@ -94,7 +94,7 @@ pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
 
     let variables_rc = Rc::new(RefCell::new(ColorMap::new_map()));
     {
-        let variables = &mut *variables_rc.deref().borrow_mut();
+        let variables = &mut *variables_rc.borrow_mut();
 
         let bg = config.palette.colors[0];
         variables.insert_color("background".into(), bg)?;
@@ -153,11 +153,11 @@ fn prefix_to_path(prefix: &Vec<String>) -> serde_yaml::Value {
 }
 
 fn list_color_map(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, color_map: &Rc<RefCell<ColorMap>>, f: ColorFn) {
-    match &*color_map.deref().borrow() {
+    match &*color_map.borrow() {
         ColorMap::Color(c) => {
             let mut mapping: Mapping = Mapping::new();
             mapping.insert("path".into(), prefix_to_path(prefix));
-            mapping.insert("color".into(), f(c));
+            mapping.insert("color".into(), f(&c));
             list.push(serde_yaml::Value::Mapping(mapping));
         }
         ColorMap::Map(map) => {
@@ -167,7 +167,7 @@ fn list_color_map(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, c
             list.push(serde_yaml::Value::Mapping(mapping));
             for (key, value) in map {
                 prefix.push(key.clone());
-                list_color_map(list, prefix, value, f);
+                list_color_map(list, prefix, &value, f);
                 prefix.pop();
             }
             let mut mapping: Mapping = Mapping::new();
@@ -178,7 +178,7 @@ fn list_color_map(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, c
     }
 }
 
-type ColorFn = fn(&Rgb) -> serde_yaml::Value;
+pub type ColorFn = fn(&Rgb) -> serde_yaml::Value;
 
 pub(crate) fn map_color_map(color_map: &Rc<RefCell<ColorMap>>, f: ColorFn ) -> serde_yaml::Value {
     match &*color_map.deref().borrow() {
