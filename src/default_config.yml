@@ -78,11 +78,11 @@ colors:
   c0: foreground
 
   # syntax highlighting
-  operator: c6
+  operator: c7
   parameter: c5
   string: c3
   function: c4
-  keyword: c7
+  keyword: c6
   static: c1
   decorator: c3
   type: c1
@@ -90,7 +90,7 @@ colors:
   variable: foreground
   field: c2 # aka instance variable
   constant: foreground
-  escape: c6
+  escape: c7
   property_value: c4
 
   # UI
