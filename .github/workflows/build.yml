@@ -1,7 +1,7 @@
 # .github/workflows/build.yml
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 name: CI
 jobs:
