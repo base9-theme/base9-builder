@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::{self}, str::FromStr};
 use ext_palette::Srgb;
-use regex::Regex;
 use serde::{Serialize, Deserialize, de::{Visitor, self}, Deserializer};
 use anyhow::anyhow;
 
@@ -8,10 +7,6 @@ use crate::palette::Palette;
 
 
 pub type Rgb = Srgb<u8>;
-
-pub fn default_config() -> Config {
-    serde_yaml::from_str(include_str!("default_config.yml")).unwrap()
-}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -22,7 +17,7 @@ pub struct Config {
 
 impl Config {
     pub fn default() -> Config {
-        serde_yaml::from_str(include_str!("default_config.yml")).unwrap()
+        serde_json::from_str(include_str!("default_config.json")).unwrap()
     }
     pub fn from_palette(palette: Palette) -> Config {
         let mut config = Self::default();
@@ -85,8 +80,7 @@ impl<'de> Visitor<'de> for ColorNamesVisitor {
         if s == "BUILT_IN" {
             return Ok(ColorNames::BuiltIn);
         }
-        let re = Regex::new(r"[a-z][0-9a-z_]*(\.[a-z][0-9a-z_]*)*").unwrap();
-        if re.is_match(s) {
+        if const_regex::match_regex!(r"[a-z][0-9a-z_]*(\.[a-z][0-9a-z_]*)*", s.as_bytes()) {
             return Ok(ColorNames::Reference(Reference {string: s.to_string()}));
         }
         Err(E::custom("invalid color name"))

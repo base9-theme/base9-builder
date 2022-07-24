@@ -1,6 +1,5 @@
 use std::{fmt, str::FromStr};
 use ext_palette::Srgb;
-use regex::Regex;
 use serde::{Serialize, de::{Visitor, self}, Deserialize, Deserializer};
 
 use crate::Color;
@@ -22,8 +21,7 @@ impl FromStr for Palette {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = Regex::new(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}").unwrap();
-        if !re.is_match(s) {
+        if !const_regex::match_regex!(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}", s.as_bytes()) {
             return Err(format!("color palette in wrong format: {}", s));
         }
 

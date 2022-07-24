@@ -19,7 +19,7 @@ use std::{
 };
 use anyhow::{Result, bail, anyhow};
 use mustache::{Data, compile_path, compile_str};
-use serde_yaml::{self, Mapping};
+use serde_json::{self, Map, Value};
 
 use crate::color_science::{Rgb, self};
 use crate::config::{Config, self};
@@ -128,16 +128,16 @@ pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
     Ok(variables_rc)
 }
 
-fn color_to_formats(c: &Rgb, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_yaml::Value {
-    let mut data_map: Mapping = Mapping::new();
+fn color_to_formats(c: &Rgb, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_json::Value {
+    let mut data_map: Map<String, Value> = Map::new();
     for (name, f) in formats {
         data_map.insert(name.to_string().into(), f(c).into());
     }
-    serde_yaml::Value::Mapping(data_map)
+    Value::Object(data_map)
 }
 
-fn prefix_to_path(prefix: &Vec<String>) -> serde_yaml::Value {
-    let mut path: Mapping = Mapping::new();
+fn prefix_to_path(prefix: &Vec<String>) -> Value {
+    let mut path: Map<String, Value> = Map::new();
     path.insert("dotted".into(), prefix.join(".").into());
     path.insert("indent".into(), " ".repeat(prefix.len()).into());
     path.insert("last".into(), prefix.last().unwrap_or(&"".to_string()).to_string().into());
@@ -149,50 +149,50 @@ fn prefix_to_path(prefix: &Vec<String>) -> serde_yaml::Value {
     //     list.push(tmp.into());
     // }
     // path.insert("list".into(), list.into());
-    serde_yaml::Value::Mapping(path)
+    Value::Object(path)
 }
 
-fn list_color_map(list: &mut Vec<serde_yaml::Value>, prefix: &mut Vec<String>, color_map: &Rc<RefCell<ColorMap>>, f: ColorFn) {
+fn list_color_map(list: &mut Vec<Value>, prefix: &mut Vec<String>, color_map: &Rc<RefCell<ColorMap>>, f: ColorFn) {
     match &*color_map.borrow() {
         ColorMap::Color(c) => {
-            let mut mapping: Mapping = Mapping::new();
+            let mut mapping: Map<String, Value> = Map::new();
             mapping.insert("path".into(), prefix_to_path(prefix));
             mapping.insert("color".into(), f(&c));
-            list.push(serde_yaml::Value::Mapping(mapping));
+            list.push(Value::Object(mapping));
         }
         ColorMap::Map(map) => {
-            let mut mapping: Mapping = Mapping::new();
+            let mut mapping: Map<String, Value> = Map::new();
             mapping.insert("path".into(), prefix_to_path(prefix));
             mapping.insert("begin".into(), true.into());
-            list.push(serde_yaml::Value::Mapping(mapping));
+            list.push(Value::Object(mapping));
             for (key, value) in map {
                 prefix.push(key.clone());
                 list_color_map(list, prefix, &value, f);
                 prefix.pop();
             }
-            let mut mapping: Mapping = Mapping::new();
+            let mut mapping: Map<String, Value> = Map::new();
             mapping.insert("path".into(), prefix_to_path(prefix));
             mapping.insert("end".into(), true.into());
-            list.push(serde_yaml::Value::Mapping(mapping));
+            list.push(Value::Object(mapping));
         }
     }
 }
 
-pub type ColorFn = fn(&Rgb) -> serde_yaml::Value;
+pub type ColorFn = fn(&Rgb) -> Value;
 
-pub(crate) fn map_color_map(color_map: &Rc<RefCell<ColorMap>>, f: ColorFn ) -> serde_yaml::Value {
+pub(crate) fn map_color_map(color_map: &Rc<RefCell<ColorMap>>, f: ColorFn ) -> Value {
     match &*color_map.deref().borrow() {
         ColorMap::Color(c) => {
             f(c)
         }
         ColorMap::Map(map) => {
-            let mut data_map: Mapping = Mapping::new();
+            let mut data_map: Map<String, Value> = Map::new();
 
             for (key, value) in map {
                 data_map.insert(key.clone().into(), map_color_map(value, f));
             }
 
-            serde_yaml::Value::Mapping(data_map)
+            Value::Object(data_map)
         }
     }
 }
@@ -211,7 +211,7 @@ pub(crate) fn map_color_map(color_map: &Rc<RefCell<ColorMap>>, f: ColorFn ) -> s
 //     }
 // }
 
-pub fn color_to_format(c: &Rgb) -> serde_yaml::Value {
+pub fn color_to_format(c: &Rgb) -> Value {
         let formats: Vec<(&str, fn(&Rgb) -> String)> = vec![
             ("hex", |x: &Rgb| format!("{:x}", x)),
             ("hex_r", |x: &Rgb| format!("{:x}", x.red)),
@@ -224,20 +224,20 @@ pub fn color_to_format(c: &Rgb) -> serde_yaml::Value {
             ("dec_g", |x: &Rgb| format!("{}", x.green as f64 / 255.)),
             ("dec_b", |x: &Rgb| format!("{}", x.blue as f64 / 255.)),
         ];
-        let mut data_map: Mapping = Mapping::new();
+        let mut data_map: Map<String, Value> = Map::new();
         for (name, f) in formats {
             data_map.insert(name.to_string().into(), f(c).into());
         }
-        serde_yaml::Value::Mapping(data_map)
+        Value::Object(data_map)
 }
 
-pub(crate) fn format_variables(config: &Config, color_map: &Rc<RefCell<ColorMap>>) -> serde_yaml::Value {
+pub(crate) fn format_variables(config: &Config, color_map: &Rc<RefCell<ColorMap>>) -> Value {
     let mut colors = map_color_map(color_map, color_to_format);
-    let mut list = Vec::<serde_yaml::Value>::new();
+    let mut list = Vec::<Value>::new();
     list_color_map(&mut list, &mut Vec::<String>::new(), color_map, color_to_format);
-    let mapping = colors.as_mapping_mut().unwrap();
+    let mapping = colors.as_object_mut().unwrap();
     let list = Vec::from(&list[1..(list.len()-1)]);
-    mapping.insert("PROGRAMMABLE".into(), serde_yaml::Value::Sequence(list));
+    mapping.insert("PROGRAMMABLE".into(), Value::Array(list));
 
     mapping.insert("PALETTE".into(), config.palette.colors.map(|x| format!("{:x}", x)).join("-").into());
     colors

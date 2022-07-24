@@ -1,6 +1,6 @@
 
 use base9::{get_variables, format_variables};
-use config::{Config, default_config};
+use config::{Config};
 use ext_palette::convert::IntoColorUnclamped;
 use ext_palette::rgb::channels::Argb;
 use clap::{arg, command, ArgAction, Command, ArgMatches};
@@ -22,8 +22,6 @@ use std::{
 };
 use anyhow::{Result, bail, anyhow};
 use mustache::{Data, compile_path, compile_str};
-use regex::Regex;
-use serde_yaml::{self, Mapping};
 
 mod utils;
 mod color_science;
@@ -69,8 +67,8 @@ fn cli() -> Command<'static> {
         // )
 }
 
-fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_yaml::Value> {
-    let mut config = default_config();
+fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_json::Value> {
+    let mut config = Config::default();
     let palette_arg: &str = matches.get_one::<String>("PALETTE").ok_or(anyhow!("missing palette!"))?;
 
     if palette_arg != "-" {
@@ -112,7 +110,7 @@ fn main() -> Result<()> {
         }
         Some(("list-variables", sub_matches)) => {
             let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
-            println!("{}", serde_yaml::to_string(&formatted_variables)?);
+            println!("{}", serde_json::to_string(&formatted_variables)?);
         }
         _ => unreachable!()
     }

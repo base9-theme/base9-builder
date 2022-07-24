@@ -100,5 +100,4 @@ pub fn render_str(palette: &str, template_str: &str) -> Result<JsValue, JsError>
     let formatted_variables = base9::format_variables(&config, &variables);
     let template = compile_str(&template_str).unwrap();
     Ok(template.render_to_string(&formatted_variables).unwrap().into())
-
 }
