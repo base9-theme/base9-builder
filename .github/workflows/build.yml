@@ -18,6 +18,11 @@ jobs:
         with:
           # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: 'latest'
+      - name: Install binaryen
+        run: |
+          set -e
+          curl -L https://github.com/WebAssembly/binaryen/releases/download/version_109/binaryen-version_109-x86_64-linux.tar.gz | tar xzf -
+          echo "`pwd`/binaryen-version_109/bin" > $GITHUB_PATH
       - run: |
           scripts/deploy.sh
       # only manual publish for now.

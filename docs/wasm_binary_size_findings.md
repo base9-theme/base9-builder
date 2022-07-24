@@ -12,7 +12,7 @@ Findings:
 
 - `regex` is very big, `const_regex` is much smaller.
 - `json` is much smaller than `yaml`.
-- `lto`, `opt-level=z`, `codegen-units=1` are all somewhat useful.
+- `lto`, `opt-level=z`, `codegen-units=1`, `wasm-opt` are all somewhat useful.
 - `opt-level=s`, `strip`, `panic=abort` are not as useful.
 - `mustache`, `JsValue::from_serde` are big, but necessary.
 
@@ -40,4 +40,5 @@ as default, I did more experiments:
 ```
 - mustache: 185kb
 - JsValue.from_serde: 209kb
++ wasm-opt-Oz: 218kb
 ```
