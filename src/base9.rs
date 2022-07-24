@@ -1,24 +1,16 @@
 
-use ext_palette::convert::IntoColorUnclamped;
 use ext_palette::rgb::channels::Argb;
-use clap::{arg, command, ArgAction, Command, ArgMatches};
 use itertools::Itertools;
 use ext_palette::{
     Srgb,
-    Xyz,
-    Lab, IntoColor, Hsl, Lch,
 };
 use std::cell::RefCell;
-use std::io::{self, Read};
 use std::ops::Deref;
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::{
     collections::HashMap,
-    env,
 };
-use anyhow::{Result, bail, anyhow};
-use mustache::{Data, compile_path, compile_str};
+use anyhow::{Result, bail};
 use serde_json::{self, Map, Value};
 
 use crate::color_science::{Rgb, self};
@@ -84,7 +76,6 @@ fn add_colors(aliases: &HashMap<String, config::ColorNames>, current_map: Rc<Ref
                 add_colors(tmp, map2.clone(), color_map.clone())?;
                 (&mut *current_map.deref().borrow_mut()).insert(key.clone(), map2)?;
             },
-            _ => bail!("other value types"),
         }
     }
     Ok(())
@@ -126,14 +117,6 @@ pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
     }
     add_colors(&config.colors, variables_rc.clone(), variables_rc.clone())?;
     Ok(variables_rc)
-}
-
-fn color_to_formats(c: &Rgb, formats: &Vec<(&str, fn(&Rgb) -> String)> ) -> serde_json::Value {
-    let mut data_map: Map<String, Value> = Map::new();
-    for (name, f) in formats {
-        data_map.insert(name.to_string().into(), f(c).into());
-    }
-    Value::Object(data_map)
 }
 
 fn prefix_to_path(prefix: &Vec<String>) -> Value {

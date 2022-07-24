@@ -1,46 +1,12 @@
 use std::str::FromStr;
-use std::{cell::RefCell, rc::Rc};
 
 use crate::{config, base9};
-use crate::base9::ColorMap;
 use crate::Palette;
 use mustache::compile_str;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(typescript_custom_section)]
-const TS_APPEND_CONTENT: &'static str = r#"
-
-export type NestedObj<T> = {
-    [index: string]: T|NestedObj<T>;
-}
-
-export type Formatted = {
-    hex: string,
-    hex_r: string,
-    hex_g: string,
-    hex_b: string,
-    int_r: string,
-    int_g: string,
-    int_b: string,
-    dec_r: string,
-    dec_g: string,
-    dec_b: string,
-}
-
-type ProgrammableEntry = {
-    path: {
-        dotted: string,
-    },
-    color?: Formatted,
-}
-
-type Data = {
-    PALETTE: string,
-    PROGRAMMABLE: ProgrammableEntry[],
-    [index: string]: NestedObj<Formatted>|string|ProgrammableEntry[],
-}
-
-"#;
+const TS_APPEND_CONTENT: &'static str = r#""#;
 
 //TODO
 pub fn set_panic_hook() {

@@ -41,7 +41,7 @@ pub fn closest_order<'a, 'b>(colors: &'a[Rgb], target: &'b [Rgb]) -> Vec<&'a Rgb
         let result = colors.into_iter().permutations(target.len()).min_by_key(|perm| {
             let mut sum: f32 = 0.;
             for (ca, cr) in target.iter().zip_eq(perm) {
-                let mut ca: Lab = ca.into_format().into_color();
+                let ca: Lab = ca.into_format().into_color();
                 let mut cr: Lab = cr.into_format().into_color();
                 cr.a-=average.1;
                 cr.b-=average.2;

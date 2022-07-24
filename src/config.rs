@@ -1,12 +1,7 @@
-use std::{collections::HashMap, fmt::{self}, str::FromStr};
-use ext_palette::Srgb;
+use std::{collections::HashMap, fmt};
 use serde::{Serialize, Deserialize, de::{Visitor, self}, Deserializer};
-use anyhow::anyhow;
 
 use crate::palette::Palette;
-
-
-pub type Rgb = Srgb<u8>;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {

@@ -12,7 +12,7 @@ pub struct Palette {
 impl fmt::Display for Palette {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = self.colors.map(|c| format!("{:x}", c)).join("-");
-        f.write_str(&s);
+        f.write_str(&s)?;
         Ok(())
     }
 }

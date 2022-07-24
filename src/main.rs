@@ -1,37 +1,21 @@
 
 use base9::{get_variables, format_variables};
 use config::{Config};
-use ext_palette::convert::IntoColorUnclamped;
-use ext_palette::rgb::channels::Argb;
-use clap::{arg, command, ArgAction, Command, ArgMatches};
-use itertools::Itertools;
-use ext_palette::{
-    Srgb,
-    Xyz,
-    Lab, IntoColor, Hsl, Lch,
-};
-use std::cell::RefCell;
+use clap::{arg, Command, ArgMatches};
 use std::io::{self, Read};
-use std::ops::Deref;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::str::FromStr;
-use std::{
-    collections::HashMap,
-    env,
-};
-use anyhow::{Result, bail, anyhow};
-use mustache::{Data, compile_path, compile_str};
+use anyhow::{Result, anyhow};
+use mustache::{compile_path, compile_str};
 
 mod utils;
 mod color_science;
 mod base9;
 mod config;
 mod palette;
-use color_science::Rgb;
 pub type Color = ext_palette::Srgb<u8>;
 
-const N: usize = 9;
+pub const N: usize = 9;
 
 fn read_stdin() -> Result<String> {
     let mut buf = String::new();
