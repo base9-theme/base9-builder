@@ -38,4 +38,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            target/release/base9-builder
+            out/base9-builder
+            out/mustache_data.min.json
