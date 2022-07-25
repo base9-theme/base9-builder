@@ -1,8 +1,7 @@
-# This documents the finding while trying to reduce wasm binary size:
+# Findings while trying to reduce wasm binary size:
 
 ## Guides followed:
 https://github.com/johnthagen/min-sized-rust
-
 
 ## History
 

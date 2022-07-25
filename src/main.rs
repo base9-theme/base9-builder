@@ -1,7 +1,7 @@
 
 use base9::{get_variables, format_variables};
 use config::{Config};
-use clap::{arg, Command, ArgMatches};
+use clap::{arg, Command, ArgMatches, Arg};
 use std::io::{self, Read};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -25,6 +25,7 @@ fn read_stdin() -> Result<String> {
 }
 
 fn cli() -> Command<'static> {
+    let palette_arg: Arg = arg!(<PALETTE> "the palette code. use `-` for default palette.");
     Command::new("git")
         .about("base9 builder CLI")
         .subcommand_required(true)
@@ -32,8 +33,7 @@ fn cli() -> Command<'static> {
         .subcommand(
             Command::new("render")
                 .about("renders theme template")
-                //TODO(CONTRIB): make sure to use the term "palette code" everywhere.
-                .arg(arg!(<PALETTE> "the palette code. use `-` for default palette."))
+                .arg(palette_arg.clone())
                 .arg(arg!(<TEMPLATE> "path to template file. Use `-` to read from stdin."))
                 .arg(
                     arg!([DEST] "path to write output to.")
@@ -42,13 +42,14 @@ fn cli() -> Command<'static> {
         .subcommand(
             Command::new("preview")
                 .about("prints a table of all generated colors to preview")
-                .arg(arg!(<PALETTE> "the palette code. use `-` for default palette."))
+                .arg(palette_arg.clone())
         )
-        // .subcommand(
-        //     Command::new("list-variables")
-        //         .about("prints all variables used by templates")
-        //         .arg(arg!(<PALETTE> "The palette code"))
-        // )
+        .subcommand(
+            Command::new("list-variables")
+                .hide(true)
+                .about("prints all variables used by templates")
+                .arg(palette_arg.clone())
+        )
 }
 
 fn matches_to_formatted_variables(matches: &ArgMatches) -> Result<serde_json::Value> {
