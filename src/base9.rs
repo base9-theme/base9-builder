@@ -79,7 +79,7 @@ fn add_colors(aliases: &HashMap<String, config::ColorNames>, current_map: Rc<Ref
         }
     }
     Ok(())
-}
+}Home
 
 pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
 

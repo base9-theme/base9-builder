@@ -13,6 +13,7 @@ mod color_science;
 mod base9;
 mod config;
 mod palette;
+mod generator;
 pub type Color = ext_palette::Srgb<u8>;
 
 pub const N: usize = 9;
@@ -38,6 +39,11 @@ fn cli() -> Command<'static> {
                 .arg(
                     arg!([DEST] "path to write output to.")
                     .value_parser(clap::value_parser!(std::path::PathBuf)))
+        )
+        .subcommand(
+            Command::new("generate")
+                .about("randomly generates a base9 palette")
+                .arg(arg!(<INCOMPLETE_PALETTE> "Palette code but omit colors that you want to be generated. (For example: -ffffff-------"))
         )
         .subcommand(
             Command::new("preview")
@@ -92,6 +98,12 @@ fn main() -> Result<()> {
         Some(("preview", sub_matches)) => {
             let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
             compile_str(include_str!("../templates/preview.mustache"))?.render(&mut io::stdout(), &formatted_variables)?;
+        }
+        Some(("generate", sub_matches)) => {
+            let palette_arg: &str = sub_matches.get_one::<String>("INCOMPLETE_PALETTE").ok_or(anyhow!("missing palette!"))?;
+            let palette_option = palette::PaletteOption::from_str(palette_arg).map_err(|s| anyhow!("{}", s))?;
+            let palette = generator::generate(&palette_option);
+            println!("https://coolors.co/{}", palette)
         }
         Some(("list-variables", sub_matches)) => {
             let formatted_variables = matches_to_formatted_variables(&sub_matches)?;
