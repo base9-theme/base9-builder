@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 use ext_palette::Srgb;
+use itertools::Itertools;
 use serde::{Serialize, de::{Visitor, self}, Deserialize, Deserializer};
 
 use crate::{Color, generator};
@@ -51,7 +52,10 @@ impl FromStr for PaletteOption {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut palette_option = PaletteOption::new();
-        'label:
+        let len = s.split('-').count();
+        if len > 9 {
+            return Err(format!("too many colors: {}", len));
+        }
         for (i, c) in s.split('-').enumerate() {
             match c {
                 "_" => (),
@@ -69,7 +73,6 @@ impl FromStr for PaletteOption {
                 }
             }
         }
-        let len = s.split('-').count();
         if len != 9 {
             return Err(format!("wrong number of colors: {}", len));
         }
@@ -145,4 +148,55 @@ impl<'de> Deserialize<'de> for PaletteOption {
     {
         deserializer.deserialize_any(PaletteOptionVisitor)
     }
+}
+
+#[test]
+fn from_str_works() {
+    let palette_str = "000000-ffffff-222222-333333-444444-555555-666666-777777-888888";
+    let palette = Palette::from_str(palette_str).unwrap();
+    assert_eq!(palette.colors.iter().map(|x| format!("{:x}", x)).join("-"), palette_str);
+}
+#[test]
+fn from_str_works_with_underscore() {
+    let palette_str = [
+        "_",
+        "ffffff",
+        "_",
+        "333333",
+        "444444",
+        "555555",
+        "666666",
+        "777777",
+        "888888",
+    ];
+    let palette = Palette::from_str(&palette_str.join("-")).unwrap();
+    let actual: Vec<String> = palette.colors.iter().map(|x| format!("{:x}", x)).collect();
+    palette_str.iter().zip_eq(actual).for_each(|(&e, a)| {
+        match e {
+            "_" => (),
+            _ => assert_eq!(*e, a),
+        }
+    });
+}
+
+#[test]
+fn from_str_works_with_question_mark() {
+    let palette_str = [
+        "_",
+        "ffffff",
+        "_",
+        "333333",
+        "444444",
+        "555555",
+        "?"
+    ];
+    let palette = Palette::from_str(&palette_str.join("-")).unwrap();
+    let actual: Vec<String> = palette.colors.iter().map(|x| format!("{:x}", x)).collect();
+    palette_str.iter().zip(actual).for_each(|(&e, a)| {
+        match e {
+            "_" => (),
+            "?" => (),
+            _ => assert_eq!(*e, a),
+        }
+    });
 }
