@@ -247,10 +247,10 @@ fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config
         if c.is_some() { continue; }
 
         let angle = new_angles.pop().unwrap();
-        // let l = rng.gen_range(config.hue_l.clone().unwrap());
-        // let hue_distance = rng.gen_range(config.hue_c.clone().unwrap());
-        let l = 0.;
-        let hue_distance = 0.;
+        let l = rng.gen_range(config.hue_l.clone().unwrap());
+        let hue_distance = rng.gen_range(config.hue_c.clone().unwrap());
+        // let l = 0.;
+        // let hue_distance = 0.;
         let mut lab = interpolate(&bg, &fg, l);
         lab.a += angle.cos() * hue_distance;
         lab.b += angle.sin() * hue_distance;

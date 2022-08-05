@@ -4,7 +4,7 @@ bg:      {{#foreground.p100}}[38;2;{{int_r}};{{int_g}};{{int_b}}m{{/foreground.
     }}[48;2;{{int_r}};{{int_g}};{{int_b}}m{{!
     }} #{{hex}}  #{{hex}}  #{{hex}}  #{{hex}}  #{{hex}}  #{{hex}}  #{{hex}}  #{{hex}} {{!
   }}{{/background}}[0m
-fg:      {{#foreground.p100}}[38;2;{{int_r}};{{int_g}};{{int_b}}m{{/foreground.p100}}{{!
+p10:     {{#foreground.p100}}[38;2;{{int_r}};{{int_g}};{{int_b}}m{{/foreground.p100}}{{!
   }}{{#c0.p10}}[48;2;{{int_r}};{{int_g}};{{int_b}}m #{{hex}} {{/c0.p10}}{{!
   }}{{#c1.p10}}[48;2;{{int_r}};{{int_g}};{{int_b}}m #{{hex}} {{/c1.p10}}{{!
   }}{{#c2.p10}}[48;2;{{int_r}};{{int_g}};{{int_b}}m #{{hex}} {{/c2.p10}}{{!
@@ -88,3 +88,8 @@ ansi8-f: {{! ansi line 2
 }}{{#ansi.ce}}[48;2;{{int_r}};{{int_g}};{{int_b}}m #{{hex}} {{/ansi.ce}}{{!
 }}{{#ansi.cf}}[48;2;{{int_r}};{{int_g}};{{int_b}}m #{{hex}} {{/ansi.cf}}{{!
 }}[0m
+
+links:
+https://coolors.co/{{PALETTE}}{{!
+https://base9-theme.github.io/preview?palette={{PALETTE}}{{!
+https://base9-theme.github.io/?base9={{PALETTE}}
