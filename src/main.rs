@@ -26,9 +26,9 @@ fn read_stdin() -> Result<String> {
 }
 
 fn cli() -> Command<'static> {
-    let palette_arg: Arg = arg!(<PALETTE> "the palette code. use `-` for default palette.");
-    Command::new("git")
-        .about("base9 builder CLI")
+    let palette_arg: Arg = arg!(<PALETTE> "the palette code. Use `-` for default palette.");
+    Command::new("base9-builder")
+        .about("base9 CLI tool")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
@@ -37,7 +37,7 @@ fn cli() -> Command<'static> {
                 .arg(palette_arg.clone())
                 .arg(arg!(<TEMPLATE> "path to template file. Use `-` to read from stdin."))
                 .arg(
-                    arg!([DEST] "path to write output to.")
+                    arg!([DEST] "path to write output to. By default output to stdout.")
                     .value_parser(clap::value_parser!(std::path::PathBuf)))
         )
         // .subcommand(
