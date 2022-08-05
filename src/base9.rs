@@ -2,7 +2,7 @@
 use ext_palette::rgb::channels::Argb;
 use itertools::Itertools;
 use ext_palette::{
-    Srgb,
+    Srgb, IntoColor,
 };
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -212,6 +212,11 @@ pub fn color_to_format(c: &Rgb) -> Value {
             data_map.insert(name.to_string().into(), f(c).into());
         }
         Value::Object(data_map)
+}
+pub(crate) fn is_dark(config: &Config) -> bool {
+    let bg: ext_palette::Lab = config.palette.colors[0].into_format().into_color();
+    let fg: ext_palette::Lab = config.palette.colors[1].into_format().into_color();
+    bg.l < fg.l
 }
 
 pub(crate) fn format_variables(config: &Config, color_map: &Rc<RefCell<ColorMap>>) -> Value {
