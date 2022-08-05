@@ -1,5 +1,5 @@
 
-use base9_builder::Palette;
+use crate::palette::Palette;
 use ext_palette::{IntoColor, Lab, rgb::channels::Argb, Srgb};
 use rand::prelude::*;
 use std::ops::RangeInclusive;
@@ -13,6 +13,28 @@ struct Config {
     hue_l: Option<RangeInclusive<f32>>,
     hue_c: Option<RangeInclusive<f32>>,
 }
+
+// struct Generator {
+//     colors: [Option<Color>;9],
+//     is_dark: Option<bool>,
+//     hue_l: Option<RangeInclusive<f32>>,
+//     hue_c: Option<RangeInclusive<f32>>,
+// }
+
+// impl Generator {
+//     fn get_average_hue(&self) {
+
+//     }
+//     fn get_is_dark(&mut self) -> bool {
+//         config.is_dark.get_or_insert(match (self.colors, average_hue) {
+//             ([Some(c), ..], _) => is_dark(&c),
+//             ([None, Some(c), ..], _) => !is_dark(&c),
+//             ([None, None, ..], Some(c)) => !is_dark(&c),
+//             ([None, None, ..], None) => rand::random::<bool>(),
+//         })
+
+//     }
+// }
 
 pub fn get_average_hue(palette_option: &PaletteOption) -> Option<Color> {
     let mut hue_average_lab_components = (0f32, 0f32, 0f32);
@@ -36,8 +58,12 @@ pub fn get_average_hue(palette_option: &PaletteOption) -> Option<Color> {
 
 
 pub fn generate(palette_option: &PaletteOption) -> Palette {
+    if palette_option.colors.iter().all(|x| x.is_some()) {
+        return Palette { colors: palette_option.colors.map(|x| x.unwrap()) };
+    }
     let mut colors = palette_option.colors.clone().map(|c| c.map(to_lab));
 
+    // let mut rng = rand::rngs::SmallRng::seed_from_u64(0);
     let mut rng = rand::thread_rng();
     let mut config = Config {
         is_dark: None,
@@ -221,9 +247,11 @@ fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config
         if c.is_some() { continue; }
 
         let angle = new_angles.pop().unwrap();
-        let l = rng.gen_range(config.hue_l.clone().unwrap());
+        // let l = rng.gen_range(config.hue_l.clone().unwrap());
+        // let hue_distance = rng.gen_range(config.hue_c.clone().unwrap());
+        let l = 0.;
+        let hue_distance = 0.;
         let mut lab = interpolate(&bg, &fg, l);
-        let hue_distance = rng.gen_range(config.hue_c.clone().unwrap());
         lab.a += angle.cos() * hue_distance;
         lab.b += angle.sin() * hue_distance;
 

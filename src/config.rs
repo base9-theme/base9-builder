@@ -75,10 +75,10 @@ impl<'de> Visitor<'de> for ColorNamesVisitor {
         if s == "BUILT_IN" {
             return Ok(ColorNames::BuiltIn);
         }
-        if const_regex::match_regex!(r"[a-z][0-9a-z_]*(\.[a-z][0-9a-z_]*)*", s.as_bytes()) {
-            return Ok(ColorNames::Reference(Reference {string: s.to_string()}));
+        if !const_regex::match_regex!(r"[a-z][0-9a-z_]*(\.[a-z][0-9a-z_]*)*", s.as_bytes()) {
+            return Err(E::custom("invalid color name"));
         }
-        Err(E::custom("invalid color name"))
+        Ok(ColorNames::Reference(Reference {string: s.to_string()}))
     }
 
     fn visit_map<V>(self, mut visitor: V) -> Result<ColorNames, V::Error>

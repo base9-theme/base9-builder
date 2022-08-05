@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 use ext_palette::Srgb;
 use serde::{Serialize, de::{Visitor, self}, Deserialize, Deserializer};
 
-use crate::Color;
+use crate::{Color, generator};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Palette {
@@ -11,6 +11,14 @@ pub struct Palette {
 
 pub struct PaletteOption {
     pub colors: [Option<Color>;9]
+}
+
+impl PaletteOption {
+    pub fn new() -> PaletteOption {
+        PaletteOption {
+            colors: [None; 9]
+        }
+    }
 }
 
 impl fmt::Display for Palette {
@@ -33,16 +41,8 @@ impl FromStr for Palette {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !const_regex::match_regex!(r"([0-9a-fA-F]{6}-){8}[0-9a-fA-F]{6}", s.as_bytes()) {
-            return Err(format!("color palette in wrong format: {}", s));
-        }
-
-        Ok(Palette { colors: s.split('-').map(|s| {
-            let r = u8::from_str_radix(&s[0..2], 16).unwrap();
-            let g = u8::from_str_radix(&s[2..4], 16).unwrap();
-            let b = u8::from_str_radix(&s[4..6], 16).unwrap();
-            return Srgb::from_components((r,g,b));
-        }).collect::<Vec<Color>>().try_into().unwrap()})
+        let palette_option = PaletteOption::from_str(s)?;
+        Ok(generator::generate(&palette_option))
     }
 }
 
@@ -50,20 +50,30 @@ impl FromStr for PaletteOption {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !const_regex::match_regex!(r"(([0-9a-fA-F]{6})?-){8}([0-9a-fA-F]{6})?", s.as_bytes()) {
-            return Err(format!("color palette in wrong format: {}", s));
-        }
-
-        Ok(PaletteOption { colors: s.split('-').map(|s| {
-            if s.len() == 0 {
-                None
-            } else {
-                let r = u8::from_str_radix(&s[0..2], 16).unwrap();
-                let g = u8::from_str_radix(&s[2..4], 16).unwrap();
-                let b = u8::from_str_radix(&s[4..6], 16).unwrap();
-                Some(Srgb::from_components((r,g,b)))
+        let mut palette_option = PaletteOption::new();
+        'label:
+        for (i, c) in s.split('-').enumerate() {
+            match c {
+                "_" => (),
+                "?" => {
+                    return Ok(palette_option);
+                },
+                c if const_regex::match_regex!(r"[0-9a-fA-F]{6}", c.as_bytes()) => {
+                    let r = u8::from_str_radix(&c[0..2], 16).unwrap();
+                    let g = u8::from_str_radix(&c[2..4], 16).unwrap();
+                    let b = u8::from_str_radix(&c[4..6], 16).unwrap();
+                    palette_option.colors[i] = Some(Srgb::new(r,g,b));
+                },
+                _ => {
+                    return Err(format!("{}th color in palette is wrong format: {}", i, c));
+                }
             }
-        }).collect::<Vec<Option<Color>>>().try_into().unwrap()})
+        }
+        let len = s.split('-').count();
+        if len != 9 {
+            return Err(format!("wrong number of colors: {}", len));
+        }
+        Ok(palette_option)
     }
 }
 

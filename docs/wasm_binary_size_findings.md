@@ -1,7 +1,13 @@
 # Findings while trying to reduce wasm binary size:
 
-## Guides followed:
+Guides followed:
 https://github.com/johnthagen/min-sized-rust
+
+Common command:
+```bash
+wasm-pack build --target web --release && ls -l pkg/base9_builder_bg.wasm
+wasm-opt -Oz -o tmp.wasm pkg/base9_builder_bg.wasm && ls -l tmp.wasm
+```
 
 ## History
 
@@ -40,4 +46,35 @@ as default, I did more experiments:
 - mustache: 185kb
 - JsValue.from_serde: 209kb
 + wasm-opt-Oz: 218kb
+```
+
+### [commit on 2022-08-05](https://github.com/base9-theme/base9-builder/tree/6d9b249f771fd06b906255d12dd410a0e1a36dd2)
+
+Findings:
+- Handlebars is about 170kb larger than mustache
+- generator (probably because of rng) is 43kb
+- small_rng for rand is larger.
+- random range is not expensive.
+- palette option check is 18kb.
+- other regex check is cheap.
+
+
+
+Data:
+```
+default: 220kb
++ handlebars: 378kb
++ generator: 263kb
++ generator + small_rng: 265kb
++ generator + small_rng + from_fixed_seed: 265kb
++ generator - inclusive_range: 263kb
++ generator - palette_regex_check: 245kb
++ generator - regex_check: 244kb
++ generator + smart_regex_check: 245kb
++ generator + smart_regex_check + wasm_opt: 243kb
++ generator + smart_regex_check + wasm_opt - inclusive_range: 243kb
+```
+Final:
+```
++ generator + smart_regex_check + some_fix: 246kb
 ```

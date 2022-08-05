@@ -2,6 +2,7 @@ mod wasm;
 mod base9;
 mod config;
 mod color_science;
+mod generator;
 mod palette;
 
 pub type Color = ext_palette::Srgb<u8>;
