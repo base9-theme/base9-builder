@@ -2,8 +2,17 @@
 use base9_builder::Palette;
 use ext_palette::{IntoColor, Lab, rgb::channels::Argb, Srgb};
 use rand::prelude::*;
+use std::ops::RangeInclusive;
+// use itertools::Itertools;
+type Color = ext_palette::Lab;
 
-use crate::{palette::PaletteOption, Color};
+use crate::{palette::PaletteOption};
+
+struct Config {
+    is_dark: Option<bool>,
+    hue_l: Option<RangeInclusive<f32>>,
+    hue_c: Option<RangeInclusive<f32>>,
+}
 
 pub fn get_average_hue(palette_option: &PaletteOption) -> Option<Color> {
     let mut hue_average_lab_components = (0f32, 0f32, 0f32);
@@ -22,30 +31,40 @@ pub fn get_average_hue(palette_option: &PaletteOption) -> Option<Color> {
     hue_average_lab_components.0 /= count;
     hue_average_lab_components.1 /= count;
     hue_average_lab_components.2 /= count;
-    let rtn: ext_palette::Srgb = ext_palette::Lab::from_components(hue_average_lab_components).into_color();
-    Some(rtn.into_format())
+    Some(Color::from_components(hue_average_lab_components))
 }
 
+
 pub fn generate(palette_option: &PaletteOption) -> Palette {
-    let mut colors = palette_option.colors.clone();
+    let mut colors = palette_option.colors.clone().map(|c| c.map(to_lab));
+
     let mut rng = rand::thread_rng();
-    let average_hue = get_average_hue(palette_option);
-    let is_dark: bool = match (colors, average_hue) {
-        ([Some(c), ..], _) => is_dark(&c),
-        ([_, Some(c), ..], _) => !is_dark(&c),
-        (_, Some(c)) => !is_dark(&c),
-        _ => rand::random::<bool>(),
+    let mut config = Config {
+        is_dark: None,
+        // is_dark: Some(false),
+        hue_l: None,
+        hue_c: None,
+        // hue_c: Some(50f32..=50f32),
     };
-    generate_bg(&mut rng, &mut colors, &average_hue, is_dark);
-    generate_fg(&mut rng, &mut colors, is_dark);
-    generate_hue(&mut rng, &mut colors, &average_hue, is_dark);
-    Palette { colors: colors.map(|x| x.unwrap()) }
+
+    let average_hue = get_average_hue(palette_option);
+    config.is_dark.get_or_insert(match (colors, average_hue) {
+        ([Some(c), ..], _) => is_dark(&c),
+        ([None, Some(c), ..], _) => !is_dark(&c),
+        ([None, None, ..], Some(c)) => !is_dark(&c),
+        ([None, None, ..], None) => rand::random::<bool>(),
+    });
+    generate_bg(&mut rng, &mut colors, &config);
+    generate_fg(&mut rng, &mut colors, &config);
+
+    generate_hue(&mut rng, &mut colors, &mut config);
+    Palette { colors: colors.map(|x| from_lab(x.unwrap())) }
 }
 
 fn get_dark_color(rng: &mut impl rand::Rng) -> Color {
-    let lab_0: Lab = Color::from_u32::<Argb>(0xff_10009cu32).into_format().into_color();
-    let lab_x: Lab = Color::from_u32::<Argb>(0xff_003000u32).into_format().into_color();
-    let lab_y: Lab = Color::from_u32::<Argb>(0xff_5a0000u32).into_format().into_color();
+    let lab_0: Color = Srgb::from_u32::<Argb>(0xff_10009cu32).into_format().into_color();
+    let lab_x: Color = Srgb::from_u32::<Argb>(0xff_003000u32).into_format().into_color();
+    let lab_y: Color = Srgb::from_u32::<Argb>(0xff_5a0000u32).into_format().into_color();
     let mut rand_l: f32 = rng.gen();
     let mut rand_x: f32 = rng.gen();
     let mut rand_y: f32 = rng.gen();
@@ -71,14 +90,14 @@ fn get_dark_color(rng: &mut impl rand::Rng) -> Color {
     rtn.b += lab_x.b * rand_x;
     rtn.b += lab_y.b * rand_y;
 
-    from_lab(rtn)
+    rtn
 }
 
 fn get_light_color(rng: &mut impl rand::Rng) -> Color {
-    let lab_w: Lab = Color::from_u32::<Argb>(0xff_ffffffu32).into_format().into_color();
-    let lab_0: Lab = Color::from_u32::<Argb>(0xff_00e2ffu32).into_format().into_color();
-    let lab_x: Lab = Color::from_u32::<Argb>(0xff_00ef00u32).into_format().into_color();
-    let lab_y: Lab = Color::from_u32::<Argb>(0xff_ffadffu32).into_format().into_color();
+    let lab_w: Color = Srgb::from_u32::<Argb>(0xff_ffffffu32).into_format().into_color();
+    let lab_0: Color = Srgb::from_u32::<Argb>(0xff_00e2ffu32).into_format().into_color();
+    let lab_x: Color = Srgb::from_u32::<Argb>(0xff_00ef00u32).into_format().into_color();
+    let lab_y: Color = Srgb::from_u32::<Argb>(0xff_ffadffu32).into_format().into_color();
     let mut rand_l: f32 = rng.gen();
     let mut rand_x: f32 = rng.gen();
     let mut rand_y: f32 = rng.gen();
@@ -103,41 +122,40 @@ fn get_light_color(rng: &mut impl rand::Rng) -> Color {
     rtn.b += lab_x.b * rand_x;
     rtn.b += lab_y.b * rand_y;
 
-    from_lab(rtn)
+    rtn
 }
 
-fn is_dark(c: &Color) -> bool {
-    let lab: ext_palette::Lab = c.into_format().into_color();
-    lab.l < 50.0
+fn is_dark(c: &Lab) -> bool {
+    c.l < 50.0
 }
 
-fn generate_bg(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], hue_average: &Option<Color>, is_dark: bool) {
+fn generate_bg(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config: &Config) {
     if colors[0].is_some() { return; }
-    colors[0] = Some(if is_dark {
+    colors[0] = Some(if config.is_dark.unwrap() {
         get_dark_color(rng)
     } else {
         get_light_color(rng)
     });
 }
 
-fn generate_fg(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], is_dark: bool) {
+fn generate_fg(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config: &Config) {
     if colors[1].is_some() { return; }
-    colors[1] = Some(if is_dark {
+    colors[1] = Some(if config.is_dark.unwrap() {
         get_light_color(rng)
     } else {
         get_dark_color(rng)
     });
 }
 
-fn to_lab(c: Color) -> Lab {
+fn to_lab(c: crate::Color) -> Color {
     c.into_format().into_color()
 }
 
-fn from_lab(lab: Lab) -> Color {
+fn from_lab(lab: Color) -> crate::Color {
     IntoColor::<Srgb>::into_color(lab).into_format()
 }
 
-pub fn length_and_angle(lab: &Lab, base: &Lab) -> (f32, f32) {
+pub fn length_and_angle(lab: &Color, base: &Color) -> (f32, f32) {
     let x = lab.a - base.a;
     let y = lab.b - base.b;
     let l = (x*x + y*y).sqrt();
@@ -146,60 +164,70 @@ pub fn length_and_angle(lab: &Lab, base: &Lab) -> (f32, f32) {
     (l, angle)
 }
 
-fn interpolate(bg: &Lab, fg: &Lab, l: f32) -> Lab {
-    let mut center = Lab::new(l,0.,0.);
+fn interpolate(bg: &Color, fg: &Color, l: f32) -> Color {
+    let mut center = Color::new(l,0.,0.);
 
     if (bg.l < center.l) ^ (fg.l < center.l) {
-        center.a = bg.a * (center.l - bg.l) / (fg.l - bg.l) + fg.a * (center.l - fg.l) / (bg.l - fg.l);
-        center.b = bg.b * (center.l - bg.l) / (fg.l - bg.l) + fg.b * (center.l - fg.l) / (bg.l - fg.l);
+        center.a = fg.a * (center.l - bg.l) / (fg.l - bg.l) + bg.a * (center.l - fg.l) / (bg.l - fg.l);
+        center.b = fg.b * (center.l - bg.l) / (fg.l - bg.l) + bg.b * (center.l - fg.l) / (bg.l - fg.l);
     }
 
     center
 }
 
-pub fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], hue_average: &Option<Color>, is_dark: bool) {
-    let bg: Lab = to_lab(colors[0].unwrap());
-    let fg: Lab = to_lab(colors[1].unwrap());
+fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config: &mut Config) {
+    let bg: Color = colors[0].unwrap();
+    let fg: Color = colors[1].unwrap();
 
-    let mut count = 0;
-    let mut max_l = 0f32;
-    let mut min_l = f32::MAX;
-    let mut hue_distance: f32 = 0.;
     let mut angles: Vec<f32> = Vec::new();
+    let mut count = 0;
+    {
+        let mut max_l = Color::min_l();
+        let mut min_l = Color::max_l();
+        let mut max_c: f32 = 0.;
+        let mut min_c: f32 = 300.;
 
-    for c in &colors[2..] {
-        if c.is_none() { continue; }
-        let lab = to_lab(c.unwrap());
-        let center = interpolate(&bg, &fg, lab.l);
-        let (d, th) = length_and_angle(&lab, &center);
-        hue_distance += d;
-        angles.push(th);
-        max_l = max_l.max(lab.l);
-        min_l = min_l.min(lab.l);
-        count += 1;
-    }
-    if count == 0 {
-        max_l = if is_dark {
-            fg.l * 0.8
-        } else {
-            100. * (1. - 0.8) + fg.l*0.8
-        };
-        min_l = max_l;
-        hue_distance = rng.gen_range(17f32..70f32);
-    } else {
-        hue_distance /= count as f32;
+        for c in &colors[2..] {
+            if c.is_none() { continue; }
+            let lab = c.unwrap();
+            let center = interpolate(&bg, &fg, lab.l);
+            let (d, th) = length_and_angle(&lab, &center);
+            max_c = max_c.max(d);
+            min_c = min_c.min(d);
+            max_l = max_l.max(lab.l);
+            min_l = min_l.min(lab.l);
+            angles.push(th);
+            count += 1;
+        }
+        if count == 0 {
+            max_l = if config.is_dark.unwrap() {
+                fg.l * 0.8
+            } else {
+                100. * (1. - 0.8) + fg.l*0.8
+            };
+            min_l = max_l;
+            max_c = if config.is_dark.unwrap() {
+                rng.gen_range(10f32..50f32)
+            } else {
+                rng.gen_range(20f32..50f32)
+            };
+            min_c = max_c;
+        }
+        config.hue_l.get_or_insert(min_l..=max_l);
+        config.hue_c.get_or_insert(min_c..=max_c);
     }
     let mut new_angles = get_new_angles(rng, &angles);
     for c in colors {
         if c.is_some() { continue; }
 
         let angle = new_angles.pop().unwrap();
-        let l = rng.gen_range(min_l..=max_l);
+        let l = rng.gen_range(config.hue_l.clone().unwrap());
         let mut lab = interpolate(&bg, &fg, l);
+        let hue_distance = rng.gen_range(config.hue_c.clone().unwrap());
         lab.a += angle.cos() * hue_distance;
         lab.b += angle.sin() * hue_distance;
 
-        *c = Some(from_lab(lab));
+        *c = Some(lab);
     }
 }
 
@@ -234,7 +262,7 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
         gaps.push(((d2 + module - d) % module, 0));
     }
     
-    for i in 0..remaining {
+    for _i in 0..remaining {
         let slot = gaps.iter_mut().max_by(|(gap1, c1), (gap2, c2)|
             (gap1 / (c1 + 1) as f32).partial_cmp(&(gap2 / (c2 + 1) as f32)).unwrap()).unwrap();
         slot.1 += 1;
