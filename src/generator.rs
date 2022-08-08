@@ -2,12 +2,13 @@
 use crate::palette::Palette;
 use ext_palette::{IntoColor, Lab, rgb::channels::Argb, Srgb};
 use rand::prelude::*;
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, f32::consts::PI};
 // use itertools::Itertools;
 type Color = ext_palette::Lab;
 
 use crate::{palette::PaletteOption};
 
+#[derive(Debug)]
 struct Config {
     is_dark: Option<bool>,
     hue_l: Option<RangeInclusive<f32>>,
@@ -84,6 +85,7 @@ pub fn generate(palette_option: &PaletteOption) -> Palette {
     generate_fg(&mut rng, &mut colors, &config);
 
     generate_hue(&mut rng, &mut colors, &mut config);
+    println!("{:?}", config);
     Palette { colors: colors.map(|x| from_lab(x.unwrap())) }
 }
 
@@ -243,6 +245,7 @@ fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config
         config.hue_c.get_or_insert(min_c..=max_c);
     }
     let mut new_angles = get_new_angles(rng, &angles);
+    println!("{:?}...{:?}", angles, new_angles);
     for c in colors {
         if c.is_some() { continue; }
 
@@ -272,12 +275,20 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
     let mut rtn = Vec::<f32>::with_capacity(remaining);
     if remaining == 0 { return rtn; }
     let mut valid_distances: Vec<f32> = angles.iter().filter(|x| x.is_finite()).map(|x| angle_to_distance(*x)).collect();
-    let module = std::f32::consts::PI * 2.;
+    let module = PI * 2.;
     valid_distances.sort_by(|a,b| a.partial_cmp(b).unwrap());
     if valid_distances.len() == 0 {
         let start = rng.gen_range(0f32..module);
         rtn.push(distance_to_angle(start));
-        for i in 1..remaining {
+        for i in 1..7 {
+            rtn.push(distance_to_angle((start + i as f32 * module / remaining as f32) % module));
+        }
+        rtn.shuffle(rng);
+        return rtn;
+    }
+    if valid_distances.len() == 1 {
+        let start = valid_distances[0];
+        for i in 1..7 {
             rtn.push(distance_to_angle((start + i as f32 * module / remaining as f32) % module));
         }
         rtn.shuffle(rng);
@@ -287,7 +298,7 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
     let mut gaps = Vec::<(f32, usize)>::with_capacity(valid_distances.len());
     for (i, d) in valid_distances.iter().enumerate() {
         let d2 = valid_distances[(i+1) % valid_distances.len()];
-        gaps.push(((d2 + module - d) % module, 0));
+        gaps.push(((d2 + 2. * module - d) % module, 0));
     }
     
     for _i in 0..remaining {
