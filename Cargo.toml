@@ -1,6 +1,6 @@
 [package]
 name = "base9-builder"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 [lib]
@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 # default = ["console_error_panic_hook"]
 
 [profile.release]
-lto = "true"
+lto = true
 opt-level = "z"
 codegen-units = 1
 # panic = "abort"

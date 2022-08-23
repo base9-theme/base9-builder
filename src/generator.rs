@@ -307,10 +307,12 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
         slot.1 += 1;
     }
 
+    println!("gaps: {:?}", &gaps);
+
     for (i, d) in valid_distances.iter().enumerate() {
         let (gap, count) = gaps[i];
         for j in 0..count {
-            rtn.push(distance_to_angle((d + j as f32 * gap / (count + 1) as f32) % module));
+            rtn.push(distance_to_angle((d + (j + 1) as f32 * gap / (count + 1) as f32) % module));
         }
     }
 

@@ -78,25 +78,39 @@ colors:
   c0: foreground
 
   # syntax highlighting
-  operator: c7
-  parameter: c5
-  string: c3
-  function: c4
-  keyword: c6
-  static: c1
-  decorator: c3
-  type: c1
-  literal: c4
-  variable: foreground
-  field: c2 # aka instance variable
+
+  # constant-like
+  variable: foreground # local / static variable
   constant: foreground
+
+  # title-like
+  static: c1
+  type: c1
+
+  keyword: c2
+  operator: c2
+
+  decorator: c2 # or tag
+
+  #quote
+  string: c3
+  property_value: c3
+
+  # other
+  field: c4 # aka instance variable
+  function: c4
+
+  keyword2: c5
+  literal: c5
+
+  parameter: c6
+
   escape: c7
-  property_value: c4
 
   # UI
   primary: c1 # main color in ui
   secondary: c2 # need special attention, should be only for small portion of the ui.
-  selection: c2
+  selection: c1
   comment: foreground
   cursor: foreground
   link: c1 # url or links in ui
