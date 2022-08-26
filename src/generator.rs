@@ -187,7 +187,7 @@ pub fn length_and_angle(lab: &Color, base: &Color) -> (f32, f32) {
     let x = lab.a - base.a;
     let y = lab.b - base.b;
     let l = (x*x + y*y).sqrt();
-    let angle = f32::atan2(x, y);
+    let angle = f32::atan2(y, x);
 
     (l, angle)
 }
