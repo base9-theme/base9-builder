@@ -281,7 +281,7 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
         let start = rng.gen_range(0f32..module);
         rtn.push(distance_to_angle(start));
         for i in 1..7 {
-            rtn.push(distance_to_angle((start + i as f32 * module / remaining as f32) % module));
+            rtn.push(distance_to_angle((start + i as f32 * module / 7 as f32) % module));
         }
         rtn.shuffle(rng);
         return rtn;
@@ -289,7 +289,7 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
     if valid_distances.len() == 1 {
         let start = valid_distances[0];
         for i in 1..7 {
-            rtn.push(distance_to_angle((start + i as f32 * module / remaining as f32) % module));
+            rtn.push(distance_to_angle((start + i as f32 * module / 7 as f32) % module));
         }
         rtn.shuffle(rng);
         return rtn;
