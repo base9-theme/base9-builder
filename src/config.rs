@@ -10,9 +10,11 @@ pub struct Config {
     pub colors: HashMap<String, ColorNames>,
 }
 
+static DEFAULT_CONFIG: &'static str = include_str!(concat!(env!("OUT_DIR"), "/default_config.json"));
+
 impl Config {
     pub fn default() -> Config {
-        serde_json::from_str(include_str!("default_config.json")).unwrap()
+        serde_json::from_str(DEFAULT_CONFIG).unwrap()
     }
     pub fn from_palette(palette: Palette) -> Config {
         let mut config = Self::default();

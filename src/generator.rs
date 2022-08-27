@@ -85,7 +85,7 @@ pub fn generate(palette_option: &PaletteOption) -> Palette {
     generate_fg(&mut rng, &mut colors, &config);
 
     generate_hue(&mut rng, &mut colors, &mut config);
-    println!("{:?}", config);
+    // println!("{:?}", config);
     Palette { colors: colors.map(|x| from_lab(x.unwrap())) }
 }
 
@@ -245,7 +245,7 @@ fn generate_hue(rng: &mut impl rand::Rng, colors: &mut [Option<Color>;9], config
         config.hue_c.get_or_insert(min_c..=max_c);
     }
     let mut new_angles = get_new_angles(rng, &angles);
-    println!("{:?}...{:?}", angles, new_angles);
+    // println!("{:?}...{:?}", angles, new_angles);
     for c in colors {
         if c.is_some() { continue; }
 
@@ -307,7 +307,7 @@ fn get_new_angles(rng: &mut impl Rng, angles: &Vec<f32>) -> Vec<f32> {
         slot.1 += 1;
     }
 
-    println!("gaps: {:?}", &gaps);
+    // println!("gaps: {:?}", &gaps);
 
     for (i, d) in valid_distances.iter().enumerate() {
         let (gap, count) = gaps[i];
