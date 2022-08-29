@@ -100,19 +100,10 @@ pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
             variables.insert(name, new_color_shade_map(c, &bg, config)?)?;
         }
 
-        let absolute_colors = [
-            ("red", Srgb::from_u32::<Argb>(0xff0000)),
-            ("yellow", Srgb::from_u32::<Argb>(0xffff00)),
-            ("green", Srgb::from_u32::<Argb>(0x00ff00)),
-            ("cyan", Srgb::from_u32::<Argb>(0x00ffff)),
-            ("blue", Srgb::from_u32::<Argb>(0x0000ff)),
-            ("magenta", Srgb::from_u32::<Argb>(0xff00ff)),
-        ];
+        let relative_colors = color_science::get_matching_absolute_color(hues);
 
-        let relative_colors = color_science::closest_order(hues, &absolute_colors.iter().map(|x| x.1).collect_vec());
-
-        for (color, (name, _)) in relative_colors.into_iter().zip_eq(absolute_colors) {
-            variables.insert(name.to_string(), new_color_shade_map(&color, &bg, config)?)?;
+        for cnw in relative_colors.into_iter() {
+            variables.insert(cnw.name.into(), new_color_shade_map(&cnw.color, &bg, config)?)?;
         }
     }
     add_colors(&config.colors, variables_rc.clone(), variables_rc.clone())?;
@@ -120,19 +111,18 @@ pub(crate) fn get_variables(config: &Config) -> Result<Rc<RefCell<ColorMap>>> {
 }
 
 fn prefix_to_path(prefix: &Vec<String>) -> Value {
-    let mut path: Map<String, Value> = Map::new();
-    path.insert("dotted".into(), prefix.join(".").into());
-    path.insert("indent".into(), " ".repeat(prefix.len()).into());
-    path.insert("last".into(), prefix.last().unwrap_or(&"".to_string()).to_string().into());
-    // let mut list = Vec::<serde_yaml::Value>::new();
-    // for (i, key) in prefix.iter().enumerate() {
-    //     let mut tmp = Mapping::new();
-    //     tmp.insert("key".into(), key.clone().into());
-    //     tmp.insert("last".into(), (i == prefix.len() - 1).into());
-    //     list.push(tmp.into());
-    // }
-    // path.insert("list".into(), list.into());
-    Value::Object(path)
+    let list: Vec<Value> = prefix.iter().enumerate().map(|(i, name)| {
+        let mut map = Map::<String, Value>::new();
+        map.insert("name".into(), Value::String(name.into()));
+        if i == 0 {
+            map.insert("first".into(), Value::Bool(true));
+        }
+        if i == prefix.len() - 1 {
+            map.insert("last".into(), Value::Bool(true));
+        }
+        Value::Object(map)
+    }).collect_vec();
+    Value::Array(list)
 }
 
 fn list_color_map(list: &mut Vec<Value>, prefix: &mut Vec<String>, color_map: &Rc<RefCell<ColorMap>>, f: ColorFn) {
@@ -197,9 +187,9 @@ pub(crate) fn map_color_map(color_map: &Rc<RefCell<ColorMap>>, f: ColorFn ) -> V
 pub fn color_to_format(c: &Rgb) -> Value {
         let formats: Vec<(&str, fn(&Rgb) -> String)> = vec![
             ("hex", |x: &Rgb| format!("{:x}", x)),
-            ("hex_r", |x: &Rgb| format!("{:x}", x.red)),
-            ("hex_g", |x: &Rgb| format!("{:x}", x.green)),
-            ("hex_b", |x: &Rgb| format!("{:x}", x.blue)),
+            ("hex_r", |x: &Rgb| format!("{:0>2x}", x.red)),
+            ("hex_g", |x: &Rgb| format!("{:0>2x}", x.green)),
+            ("hex_b", |x: &Rgb| format!("{:0>2x}", x.blue)),
             ("int_r", |x: &Rgb| format!("{}", x.red)),
             ("int_g", |x: &Rgb| format!("{}", x.green)),
             ("int_b", |x: &Rgb| format!("{}", x.blue)),

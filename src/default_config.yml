@@ -69,12 +69,20 @@ colors:
     c7: foreground.p75
     c8: foreground.p25
     c9: red.p125
+
     ca: green.p125
     cb: yellow.p125
     cc: blue.p125
     cd: magenta.p125
     ce: cyan.p125
     cf: foreground.p100
+
+    c10: green.p125
+    c11: yellow.p125
+    c12: blue.p125
+    c13: magenta.p125
+    c14: cyan.p125
+    c15: foreground.p100
   c0: foreground
 
   # syntax highlighting
@@ -118,7 +126,7 @@ colors:
   match: c4 # search result
   divider: foreground
   scroll: foreground
-  line_number: foreground
+  line_number: foreground #
   quote: c3 # Same as string. for displaying quotes in a document or ui context
   fold: foreground # Something that can fold/expand, or a folder.
   debug: c5 # anything related to debugging

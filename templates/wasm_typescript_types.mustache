@@ -13,10 +13,10 @@ export type Formatted = {
 
 type ProgrammableEntry = {
     path: {
-        dotted: string,
-        indent: string,
-        last: string,
-    },
+        name: string,
+        first?: true,
+        last?: true,
+    }[],
     color?: Formatted,
     begin?: true,
     end?: true,
@@ -30,9 +30,10 @@ export type Data = {
 {{=<% %>=}}
 export type Colors<T> = {
 <%#PROGRAMMABLE%><%!
-%><%path.indent%><%path.indent%><%!
-%><%#begin%><%path.last%>: {<%/begin%><%!
-%><%#color%><%path.last%>: T,<%/color%><%!
-%><%#end%>},<%/end%>
-<%/PROGRAMMABLE%>
-};
+%><%#path%>  <%/path%><%!                                                 indent
+%><%#begin%><%#path%><%#last%><%name%>: {<%/last%><%/path%><%/begin%><%!  "name: {"
+%><%#color%><%#path%><%#last%><%name%>: T,<%/last%><%/path%><%/color%><%! "key: T,"
+%><%#end%>},<%/end%><%!                                                   "},"
+%>
+<%/PROGRAMMABLE%><%!
+%>};

@@ -8,6 +8,12 @@ mod palette;
 pub type Color = ext_palette::Srgb<u8>;
 pub use palette::Palette;
 
+pub fn to_data(palette: &Palette) -> serde_json::Value {
+    let config = config::Config::from_palette(*palette);
+    let variables = base9::get_variables(&config).unwrap();
+    base9::format_variables(&config, &variables)
+}
+
 pub fn to_mustache_data(palette: &Palette) -> mustache::Data {
     let config = config::Config::from_palette(*palette);
     let variables = base9::get_variables(&config).unwrap();
