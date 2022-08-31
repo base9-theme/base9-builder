@@ -1,4 +1,3 @@
-
 use crate::palette::Palette;
 use ext_palette::{IntoColor, Lab, rgb::channels::Argb, Srgb};
 use rand::prelude::*;
