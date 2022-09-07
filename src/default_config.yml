@@ -115,6 +115,14 @@ colors:
 
   escape: c7
 
+  css:
+    element: c1
+    class: c2
+    # value: c3
+    # property: c4
+    id: c5
+    pseudo: c6
+
   # UI
   primary: c1 # main color in ui
   secondary: c2 # need special attention, should be only for small portion of the ui.
